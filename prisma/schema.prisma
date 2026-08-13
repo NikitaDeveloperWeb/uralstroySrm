@@ -1,0 +1,401 @@
+generator client {
+  provider = "prisma-client-js"
+  seed     = "npx tsx prisma/seed.ts"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// Пользователи (задел для мультипользовательского режима)
+// ============================================================
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  role      String   @default("admin") // admin, manager, worker
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+// ============================================================
+// Проекты / Объекты
+// ============================================================
+
+model Project {
+  id             Int        @id @default(autoincrement())
+  name           String
+  area           String     // площадь в м²
+  address        String
+  type           String     // дом, баня, туалет, хозблок, веранда
+  cost           Int        // стоимость в рублях
+  deadline       DateTime   // дата сдачи
+  complexity     String     // легкий, средний, сложный
+  status         String     // создан, в работе, завершен
+  code           String     @unique
+  prepayment     Int?       // сумма предоплаты
+  prepaymentDate DateTime?
+  unitRateId     Int?
+  unitRate       UnitRate?  @relation(fields: [unitRateId], references: [id])
+  brigadeId      Int?
+  brigade        Brigade?   @relation(fields: [brigadeId], references: [id])
+  clientId       Int?
+  client         Client?    @relation(fields: [clientId], references: [id])
+  materials        MaterialEstimate[]
+  overheads        ProjectOverhead[]
+  completedWorks   CompletedWork[]
+  reports          ProjectReport[]
+  workReports      EmployeeWorkReport[]
+  financeReports   FinanceReport[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("projects")
+}
+
+// ============================================================
+// Клиенты
+// ============================================================
+
+model Client {
+  id        Int       @id @default(autoincrement())
+  name      String
+  phone     String
+  email     String?
+  projects  Project[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("clients")
+}
+
+// ============================================================
+// Бригады
+// ============================================================
+
+model Brigade {
+  id         Int       @id @default(autoincrement())
+  name       String
+  leaderId   Int       // ID прораба
+  memberIds  String    // JSON-строка: "[2, 4]"
+  skills     String    // JSON-строка: "[\"сварщик\", \"монтажник\"]"
+  projects   Project[]
+  employees  Employee[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("brigades")
+}
+
+// ============================================================
+// Сотрудники
+// ============================================================
+
+model Employee {
+  id               Int       @id @default(autoincrement())
+  fullName         String
+  birthDate        DateTime
+  phone            String
+  address          String
+  hireDate         DateTime
+  workplace        String
+  paymentType      String
+  employmentType   String
+  skills           String    // JSON-строка: "[\"сварщик\", \"плотник\"]"
+  brigadeId        Int?
+  brigade          Brigade?  @relation(fields: [brigadeId], references: [id])
+  workReports      EmployeeWorkReport[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("employees")
+}
+
+// ============================================================
+// Товары на складе
+// ============================================================
+
+model WarehouseItem {
+  id          Int               @id @default(autoincrement())
+  name        String
+  category    String            // кирпич, цемент, дерево, металл...
+  quantity    Int
+  unit        String            // шт, м³, кг, м²
+  location    String            // Склад А, секция 1
+  lastUpdate  DateTime
+  status      String            // достаточно, мало, критически мало, нет в наличии
+  movements     WarehouseMovement[]
+  notifications Notification[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("warehouse_items")
+}
+
+// ============================================================
+// Перемещения товаров (движение склада)
+// ============================================================
+
+model WarehouseMovement {
+  id         Int             @id @default(autoincrement())
+  itemId     Int
+  item       WarehouseItem   @relation(fields: [itemId], references: [id])
+  type       String          // income, expense
+  quantity   Int
+  date       DateTime
+  comment    String?
+  createdAt  DateTime        @default(now())
+
+  @@map("warehouse_movements")
+}
+
+// ============================================================
+// Расценки по типам работ (за квадратный метр)
+// ============================================================
+
+model UnitRate {
+  id          Int       @id @default(autoincrement())
+  name        String    // название работы (например: "Сосна", "Липа", "Каркас", "Кровля")
+  category    String    // категория (например: "Деревянные конструкции", "Кровля", "Отделка")
+  unit        String    @default("м²")  // единица измерения
+  pricePerUnit Float   // цена за единицу
+  description String?   // описание
+  isActive    Boolean   @default(true)  // активна ли расценка
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  projects    Project[]
+
+  @@map("unit_rates")
+}
+
+// ============================================================
+// Шаблоны материалов (универсальный список для смет)
+// ============================================================
+
+model MaterialTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String   // название материала
+  quantity    String   // количество с единицами
+  cost        Int      // стоимость в рублях
+  category    String?  // категория материала
+  isSystem    Boolean  @default(false) // системный шаблон (нельзя удалить)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("material_templates")
+}
+
+// ============================================================
+// Шаблоны выполненных работ
+// ============================================================
+
+model WorkTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String   // название работы
+  quantity    String   // количество с единицами
+  cost        Int      // стоимость в рублях
+  category    String?  // категория работы
+  isSystem    Boolean  @default(false) // системный шаблон (нельзя удалить)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("work_templates")
+}
+
+// ============================================================
+// Смета материалов (привязана к проекту)
+// ==============================================================
+
+model MaterialEstimate {
+  id        Int     @id @default(autoincrement())
+  projectId Int
+  project   Project @relation(fields: [projectId], references: [id])
+  name      String  // название материала
+  quantity  String  // количество с единицами
+  cost      Int     // стоимость в рублях
+  category  String? // категория материала
+  createdAt DateTime @default(now())
+
+  @@map("material_estimates")
+}
+
+// ============================================================
+// Шаблоны общих расходов проекта
+// ============================================================
+
+model ProjectOverheadTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String   // название расхода
+  cost        Int      // стоимость в рублях
+  category    String?  // категория расхода
+  isSystem    Boolean  @default(false) // системный шаблон (нельзя удалить)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("project_overhead_templates")
+}
+
+// ============================================================
+// Общие расходы проекта
+// ============================================================
+
+model ProjectOverhead {
+  id        Int     @id @default(autoincrement())
+  projectId Int
+  project   Project @relation(fields: [projectId], references: [id])
+  name      String  // название расхода
+  cost      Int     // стоимость в рублях
+  category  String? // категория расхода
+  createdAt DateTime @default(now())
+
+  @@map("project_overheads")
+}
+
+// ============================================================
+// Смета выполненных работ (привязана к проекту)
+// ============================================================
+
+model CompletedWork {
+  id        Int     @id @default(autoincrement())
+  projectId Int
+  project   Project @relation(fields: [projectId], references: [id])
+  name      String  // название работы
+  quantity  String  // количество с единицами
+  cost      Int     // стоимость в рублях
+  category  String? // категория работы
+  createdAt DateTime @default(now())
+
+  @@map("completed_works")
+}
+
+// ============================================================
+// Категории оплаты труда
+// ============================================================
+
+model PaymentCategory {
+  id         Int  @id @default(autoincrement())
+  name       String // Цех, Монтажники, Премия цеха...
+  percentage Int  // процент
+  createdAt  DateTime @default(now())
+
+  @@map("payment_categories")
+}
+
+// ============================================================
+// Финансовые фонды
+// ============================================================
+
+model Fund {
+  id          Int              @id @default(autoincrement())
+  name        String
+  description String?
+  balance     Int              @default(0)
+  transactions FundTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("funds")
+}
+
+model FundTransaction {
+  id         Int    @id @default(autoincrement())
+  fundId     Int
+  fund       Fund   @relation(fields: [fundId], references: [id])
+  amount     Int
+  type       String // income, expense
+  description String?
+  date       DateTime
+  createdAt  DateTime @default(now())
+
+  @@map("fund_transactions")
+}
+
+// ============================================================
+// Отчеты по проектам
+// ============================================================
+
+model ProjectReport {
+  id         Int     @id @default(autoincrement())
+  projectId  Int
+  project    Project @relation(fields: [projectId], references: [id])
+  date       DateTime
+  periodFrom DateTime
+  periodTo   DateTime
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@map("project_reports")
+}
+
+// ============================================================
+// Служебные записии сотрудников (сдельная оплата)
+// ============================================================
+
+model EmployeeWorkReport {
+  id         Int     @id @default(autoincrement())
+  employeeId Int
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  projectId  Int
+  project    Project  @relation(fields: [projectId], references: [id])
+  workType   String
+  quantity   Float
+  rate       Float   // ставка за единицу
+  amount     Float   // итоговая сумма
+  date       DateTime
+  comment    String?
+  createdAt  DateTime @default(now())
+
+  @@map("employee_work_reports")
+}
+
+// ============================================================
+// Финансовые отчеты
+// ============================================================
+
+model FinanceReport {
+  id           Int     @id @default(autoincrement())
+  projectId    Int?
+  project      Project? @relation(fields: [projectId], references: [id])
+  date         DateTime
+  totalIncome  Int
+  totalExpense Int
+  profit       Int
+  comment      String?
+  createdAt    DateTime @default(now())
+
+  @@map("finance_reports")
+}
+
+
+// ============================================================
+// Уведомления
+// ============================================================
+
+model Notification {
+  id         Int             @id @default(autoincrement())
+  type       String          // overdue, low-stock, out-of-stock
+  message    String
+  priority   String          // high, medium
+  link       String?
+  date       DateTime
+  isRead     Boolean         @default(false)
+  isArchived Boolean         @default(false)
+  projectId  Int?
+  itemId     Int?
+  item       WarehouseItem?  @relation(fields: [itemId], references: [id])
+  createdAt  DateTime        @default(now())
+
+  @@map("notifications")
+}

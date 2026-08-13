@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GigaCodeAgentSettings">
+    <option name="autoApproveEdits" value="true" />
+    <option name="autoApprovedCommands">
+      <list>
+        <Execute>
+          <option name="pattern" value="cd *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="npm run *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /n &quot;activeTab === 'employees'&quot; E:\Uralstroy\my-app\app\employees\page.tsx" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /n &quot;&lt;/div&gt;&quot; E:\Uralstroy\my-app\app\employees\page.tsx" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;(Get-Content 'E:/Uralstroy/my-app/app/projects/[id]/page.tsx').Count&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;(Get-Content 'E:\Uralstroy\my-app\app\projects\[id]\page.tsx').Count&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;const fs=require('fs'); const lines=fs.readFileSync('E:/Uralstroy/my-app/app/projects/[id]/page.tsx','utf8').split('\n'); console.log('Total lines:', lines.length); console.log('Last 10 lines:'); lines.slice(-10).forEach((l,i) =&gt; console.log(lines.length-10+i, l));&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="npm install *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;const fs=require('fs'); const lines=fs.readFileSync('E:/Uralstroy/my-app/shared/lib/pdfExport.ts','utf8').split('\n'); lines.forEach((l,i) =&gt; { if(l.includes('undefined')) console.log(i+1, l); });&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="npm list *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="npx prisma *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item prisma.config.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="ls *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="npm ls *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="npx tsx *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="npx tsc *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Start-Process npm *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;const { PrismaClient } = require('@prisma/client'); const p = new PrismaClient(); p.project.findMany({select:{id:true,name:true,status:true,code:true,area:true,address:true,type:true,cost:true,deadline:true,brigadeId:true},orderBy:{id:'asc'}}).then(d=&gt;{console.log('ПРОЕКТЫ ('+d.length+' шт):');d.forEach(r=&gt;console.log('  '+r.id+'|'+r.code+'|'+r.name+'|'+r.type+'|'+r.status+'|'+r.area+'м²|'+r.cost+'₽|'+r.address));}).finally(()=&gt;p.$disconnect())&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node E:/Uralstroy/my-app/.temp/db-check.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Force -ErrorAction SilentlyContinue &quot;E:/Uralstroy/my-app/node_modules/.prisma/client/query_engine-windows.dll.node.tmp*&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="git diff *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="taskkill /F /IM node.exe 2&gt;$null" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-Content &quot;E:/Uralstroy/my-app/shared/components/projects/EditableTable.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Invoke-WebRequest -Uri &quot;http://localhost:3000/api/employees&quot; -UseBasicParsing" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Invoke-WebRequest -Uri &quot;http://localhost:3000/api/unit-rates&quot; -UseBasicParsing" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -ExpandProperty Content 2&gt;&amp;1" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="taskkill /PID 15556 /F 2&gt;&amp;1" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="git log *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="taskkill /PID 12632 /F" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="npx next *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-Content .next/dev/logs/next-development.log -Tail 50" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Stop-Process node *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="$env:DATABASE_URL=file:./dev.db" />
+        </Execute>
+      </list>
+    </option>
+    <option name="autoApprovedReads">
+      <list>
+        <Read>
+          <option name="pattern" value="$PROJECT_DIR$/../../Uuralstroy/my-app/*" />
+        </Read>
+      </list>
+    </option>
+    <option name="lastAutoApproveScope" value="SESSION" />
+  </component>
+</project>
