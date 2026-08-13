@@ -91,7 +91,17 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    const validated = updateProjectSchema.parse(body);
+    console.log('PATCH /api/projects/[id] body:', JSON.stringify(body, null, 2));
+    let validated;
+    try {
+      validated = updateProjectSchema.parse(body);
+    } catch (e: any) {
+      console.error('Zod validation error:', e.errors || e.message);
+      if (e.errors) {
+        return errorResponse('Некорректные данные', 400, e.errors);
+      }
+      throw e;
+    }
 
     const project = await prisma.project.update({
       where: { id: projectId },

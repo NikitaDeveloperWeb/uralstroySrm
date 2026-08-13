@@ -36,6 +36,7 @@ async function apiFetch(url: string, options?: RequestInit) {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
+    console.error('API Error:', res.status, JSON.stringify(body, null, 2));
     throw new Error(body.error || `API error: ${res.status}`);
   }
   return res.json();

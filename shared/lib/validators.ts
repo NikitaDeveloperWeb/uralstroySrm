@@ -6,6 +6,15 @@ export { ZodError } from 'zod';
 // Project Schemas
 // ============================================================
 
+const emptyToNull = (v: unknown): unknown => v === '' || v == null || v === undefined ? null : v;
+const emptyToZero = (v: unknown): unknown => v === '' || v == null || v === undefined ? 0 : Number(v);
+const stringToDate = (v: unknown): unknown => {
+  if (v === '' || v == null || v === undefined) return null;
+  if (v instanceof Date) return isNaN(v.getTime()) ? null : v;
+  const d = new Date(String(v));
+  return isNaN(d.getTime()) ? null : d;
+};
+
 export const createProjectSchema = z.object({
   name: z.string().min(1, 'Название обязательно'),
   area: z.string().min(1, 'Площадь обязательна'),
@@ -18,10 +27,30 @@ export const createProjectSchema = z.object({
   }),
   status: z.enum(['создан', 'в работе', 'завершен']).default('создан'),
   code: z.string().min(1, 'Код обязателен'),
-  prepayment: z.coerce.number().min(0).optional().nullable(),
-  prepaymentDate: z.coerce.date().optional().nullable(),
-  unitRateId: z.coerce.number().int().positive().optional().nullable(),
-  brigadeId: z.coerce.number().int().positive().optional().nullable(),
+  prepayment: z.preprocess(emptyToNull, z.number().min(0).nullable().optional()),
+  prepaymentDate: z.preprocess(stringToDate, z.date().optional().nullable()),
+  unitRateId: z.preprocess(emptyToNull, z.number().int().positive().nullable().optional()),
+  brigadeId: z.preprocess(emptyToNull, z.number().int().positive().nullable().optional()),
+  // Поля для карты объекта
+  floors: z.preprocess(emptyToNull, z.number().int().positive().nullable().optional()),
+  hasMansard: z.preprocess(emptyToNull, z.boolean().nullable().optional()),
+  roofType: z.string().nullable().optional(),
+  roofColor: z.string().nullable().optional(),
+  hasVeranda: z.preprocess(emptyToNull, z.boolean().nullable().optional()),
+  verandaSize: z.string().nullable().optional(),
+  hasPorhch: z.preprocess(emptyToNull, z.boolean().nullable().optional()),
+  foundations: z.string().nullable().optional(),
+  walls: z.string().nullable().optional(),
+  insulation: z.string().nullable().optional(),
+  windows: z.string().nullable().optional(),
+  doorType: z.string().nullable().optional(),
+  roofMaterial: z.string().nullable().optional(),
+  communication: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  layout: z.string().nullable().optional(),
+  baseType: z.string().nullable().optional(),
+  homeType: z.string().nullable().optional(),
+  insulationThickness: z.string().nullable().optional(),
 });
 
 export const updateProjectSchema = createProjectSchema.partial();
@@ -345,3 +374,20 @@ export const createClientSchema = z.object({
 });
 
 export const updateClientSchema = createClientSchema.partial();
+
+// ============================================================
+// ProjectTransaction Schemas
+// ============================================================
+
+export const createProjectTransactionSchema = z.object({
+  projectId: z.coerce.number().int().positive(),
+  amount: z.coerce.number().positive('Сумма должна быть больше 0'),
+  date: z.coerce.date(),
+  comment: z.string().optional().nullable(),
+});
+
+export const updateProjectTransactionSchema = z.object({
+  amount: z.coerce.number().int().positive('Сумма должна быть больше 0').optional(),
+  date: z.coerce.date().optional(),
+  comment: z.string().optional().nullable(),
+});

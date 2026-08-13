@@ -32,6 +32,16 @@ export interface UnitRate {
   isActive: boolean;
 }
 
+export interface ProjectTransaction {
+  id: number;
+  projectId: number;
+  amount: number;
+  date: string;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Project {
   id: number;
   name: string;
@@ -51,6 +61,29 @@ export interface Project {
   brigade?: Brigade | null;
   materials?: ProjectMaterial[];
   completedWorks?: ProjectCompletedWork[];
+  transactions?: ProjectTransaction[];
+  
+  // Поля для карты объекта
+  floors?: number | null;
+  hasMansard?: boolean | null;
+  roofType?: string | null;
+  roofColor?: string | null;
+  hasVeranda?: boolean | null;
+  verandaSize?: string | null;
+  hasPorhch?: boolean | null;
+  foundations?: string | null;
+  walls?: string | null;
+  insulation?: string | null;
+  windows?: string | null;
+  doorType?: string | null;
+  communication?: string | null;
+  description?: string | null;
+  baseType?: string | null;
+  homeType?: string | null;
+  insulationThickness?: string | null;
+  roofMaterial?: string | null;
+  layout?: string | null;
+  
   createdAt: string;
   updatedAt: string;
 }
@@ -94,6 +127,27 @@ export interface CreateProjectInput {
   prepaymentDate?: string | null;
   unitRateId?: number | null;
   brigadeId?: number | null;
+  
+  // Поля для карты объекта
+  floors?: number | null;
+  hasMansard?: boolean | null;
+  roofType?: string | null;
+  roofColor?: string | null;
+  hasVeranda?: boolean | null;
+  verandaSize?: string | null;
+  hasPorhch?: boolean | null;
+  foundations?: string | null;
+  walls?: string | null;
+  insulation?: string | null;
+  windows?: string | null;
+  doorType?: string | null;
+  communication?: string | null;
+  description?: string | null;
+  baseType?: string | null;
+  homeType?: string | null;
+  insulationThickness?: string | null;
+  roofMaterial?: string | null;
+  layout?: string | null;
 }
 
 export interface UpdateProjectInput {
@@ -110,4 +164,25 @@ export interface UpdateProjectInput {
   prepaymentDate?: string | null;
   unitRateId?: number | null;
   brigadeId?: number | null;
+  
+  // Поля для карты объекта
+  floors?: number | null;
+  hasMansard?: boolean | null;
+  roofType?: string | null;
+  roofColor?: string | null;
+  hasVeranda?: boolean | null;
+  verandaSize?: string | null;
+  hasPorhch?: boolean | null;
+  foundations?: string | null;
+  walls?: string | null;
+  insulation?: string | null;
+  windows?: string | null;
+  doorType?: string | null;
+  communication?: string | null;
+  description?: string | null;
+  baseType?: string | null;
+  homeType?: string | null;
+  insulationThickness?: string | null;
+  roofMaterial?: string | null;
+  layout?: string | null;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { EstimateTable } from '@/shared/components/estimates/EstimateTable';
 import { useMaterialEstimateStore } from '@/shared/stores/materialEstimateStore';
 import type { WorkTemplate } from '@/shared/stores/materialEstimateStore';
@@ -23,10 +23,17 @@ export function WorksTab({ items, templates, onSave, isSaving, projectId }: Work
   const [editItems, setEditItems] = useState<ProjectCompletedWork[]>(() => [...items]);
   const [editing, setEditing] = useState(false);
 
-  const handleApplyTemplate = async (template: { name: string; quantity: string; cost: number; category?: string | null }) => {
-    // Если не в режиме редактирования — включаем его и синхронизируем editItems с current items
+  // Синхронизируем editItems с items, когда не в режиме редактирования
+  useEffect(() => {
     if (!editing) {
       setEditItems([...items]);
+    }
+  }, [items, editing]);
+
+  const handleApplyTemplate = async (template: { name: string; quantity: string; cost: number; category?: string | null }) => {
+    // Если не в режиме редактирования — просто включаем его
+    // editItems уже синхронизирован с items через useEffect
+    if (!editing) {
       setEditing(true);
     }
     const newItem: ProjectCompletedWork = {

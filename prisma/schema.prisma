@@ -42,6 +42,27 @@ model Project {
   prepaymentDate DateTime?
   unitRateId     Int?
   unitRate       UnitRate?  @relation(fields: [unitRateId], references: [id])
+  
+  // Дополнительные поля для карты объекта
+  floors        Int?        // количество этажей
+  hasMansard    Boolean?    // есть ли мансарда
+  roofType      String?     // тип крыши: односкатная, двускатная, вальмовая, шатровая
+  roofColor     String?     // цвет крыши
+  hasVeranda    Boolean?    // есть ли веранда
+  verandaSize   String?     // размер веранды
+  hasPorhch     Boolean?    // есть ли крыльцо
+  foundations   String?     // тип фундамента
+  baseType      String?     // основание (из чего делается основание на фундаменте)
+  homeType      String?     // тип дома: круглогодичный, сезонный
+  walls         String?     // тип стен
+  insulation    String?     // тип утепления
+  insulationThickness String? // толщина утепления
+  windows       String?     // тип окон
+  doorType      String?     // тип двери
+  roofMaterial  String?     // тип кровли
+  communication String?     // коммуникации (газ, вода, электричество, канализация)
+  description   String?     // дополнительное описание
+  layout        String?     // планировка
   brigadeId      Int?
   brigade        Brigade?   @relation(fields: [brigadeId], references: [id])
   clientId       Int?
@@ -52,6 +73,7 @@ model Project {
   reports          ProjectReport[]
   workReports      EmployeeWorkReport[]
   financeReports   FinanceReport[]
+  transactions     ProjectTransaction[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -376,6 +398,24 @@ model FinanceReport {
   createdAt    DateTime @default(now())
 
   @@map("finance_reports")
+}
+
+// ============================================================
+// Транзакции проекта (платежи клиента)
+// ============================================================
+
+model ProjectTransaction {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  project   Project  @relation(fields: [projectId], references: [id])
+  amount    Int      // сумма в рублях
+  date      DateTime // дата транзакции
+  comment   String?  // комментарий
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("project_transactions")
 }
 
 

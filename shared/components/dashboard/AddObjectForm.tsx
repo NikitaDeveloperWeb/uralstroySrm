@@ -19,6 +19,28 @@ interface AddObjectFormProps {
     prepayment?: string;
     prepaymentDate?: string;
     brigadeId?: string;
+    // Поля для карты объекта
+    floors?: string;
+    roofType?: string;
+    roofColor?: string;
+    hasMansard?: boolean;
+    hasVeranda?: boolean;
+    verandaSize?: string;
+    hasPorhch?: boolean;
+    foundations?: string;
+    baseType?: string;
+    homeType?: string;
+    walls?: string;
+    insulation?: string;
+    windows?: string;
+    doorType?: string;
+    roofMaterial?: string;
+    communication?: string;
+    description?: string;
+    layout?: string;
+    insulationThickness?: string;
+    baseType?: string;
+    homeType?: string;
   }) => void;
   brigades: Brigade[];
 }
@@ -35,6 +57,24 @@ export function AddObjectForm({ onSubmit, brigades }: AddObjectFormProps) {
     prepayment: '',
     prepaymentDate: '',
     brigadeId: '',
+    // Поля для карты объекта
+    floors: '',
+    roofType: '',
+    roofColor: '',
+    hasMansard: false,
+    hasVeranda: false,
+    verandaSize: '',
+    hasPorhch: false,
+    foundations: '',
+    baseType: '',
+    homeType: '',
+    walls: '',
+    insulation: '',
+    insulationThickness: '',
+    windows: '',
+    doorType: '',
+    communication: '',
+    description: '',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -43,6 +83,14 @@ export function AddObjectForm({ onSubmit, brigades }: AddObjectFormProps) {
 
   const handleComplexityChange = (value: string) => {
     setFormData({ ...formData, complexity: value });
+  };
+
+  const handleBooleanChange = (field: string, value: boolean) => {
+    setFormData({ ...formData, [field]: value });
+  };
+
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -59,6 +107,29 @@ export function AddObjectForm({ onSubmit, brigades }: AddObjectFormProps) {
       prepayment: '',
       prepaymentDate: '',
       brigadeId: '',
+      // Поля для карты объекта
+      floors: '',
+      roofType: '',
+      roofColor: '',
+      hasMansard: false,
+      hasVeranda: false,
+      verandaSize: '',
+      hasPorhch: false,
+      foundations: '',
+      baseType: '',
+      homeType: '',
+      walls: '',
+      insulation: '',
+      insulationThickness: '',
+      windows: '',
+      doorType: '',
+      roofMaterial: '',
+      communication: '',
+      description: '',
+      layout: '',
+      insulationThickness: '',
+      baseType: '',
+      homeType: '',
     });
   };
 
@@ -255,6 +326,281 @@ export function AddObjectForm({ onSubmit, brigades }: AddObjectFormProps) {
             value={formData.prepaymentDate}
             onChange={handleChange}
             className={inputClasses}
+          />
+        </div>
+      </div>
+
+      {/* Секция карты объекта */}
+      <div className="pt-6 border-t-2 border-gray-200">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">🏗 Карта объекта</h3>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Количество этажей</label>
+            <input
+              type="number"
+              name="floors"
+              value={formData.floors}
+              onChange={handleChange}
+              placeholder="1"
+              min="1"
+              className={inputClasses}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Тип крыши</label>
+            <select
+              name="roofType"
+              value={formData.roofType}
+              onChange={handleChange}
+              className={inputClasses}
+            >
+              <option value="">Не выбрано</option>
+              <option value="односкатная">Односкатная</option>
+              <option value="двускатная">Двускатная</option>
+              <option value="вальмовая">Вальмовая</option>
+              <option value="шатровая">Шатровая</option>
+              <option value="другое">Другое</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Цвет крыши</label>
+            <input
+              type="text"
+              name="roofColor"
+              value={formData.roofColor}
+              onChange={handleChange}
+              placeholder="Красный, коричневый..."
+              className={inputClasses}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Тип фундамента</label>
+            <select
+              name="foundations"
+              value={formData.foundations}
+              onChange={handleChange}
+              className={inputClasses}
+            >
+              <option value="">Не выбрано</option>
+              <option value="ленточный">Ленточный</option>
+              <option value="свайный">Свайный</option>
+              <option value="плитный">Плитный</option>
+              <option value="столбчатый">Столбчатый</option>
+              <option value="другой">Другой</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Тип стен</label>
+            <select
+              name="walls"
+              value={formData.walls}
+              onChange={handleChange}
+              className={inputClasses}
+            >
+              <option value="">Не выбрано</option>
+              <option value="кирпич">Кирпич</option>
+              <option value="газобетон">Газобетон</option>
+              <option value="дерево">Дерево</option>
+              <option value="каркас">Каркас</option>
+              <option value="SIP-панели">SIP-панели</option>
+              <option value="другой">Другой</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Тип утепления</label>
+            <select
+              name="insulation"
+              value={formData.insulation}
+              onChange={handleChange}
+              className={inputClasses}
+            >
+              <option value="">Не выбрано</option>
+              <option value="минеральная вата">Минеральная вата</option>
+              <option value="пенополистирол">Пенополистирол (ПС)</option>
+              <option value="экструдированный пенополистирол">Экструдированный (ЭППС)</option>
+              <option value="пенополиуретан">Пенополиуретан (ППУ)</option>
+              <option value="эковата">Эковата</option>
+              <option value="пенофол">Пенофол</option>
+              <option value="другой">Другой</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Толщина утепления</label>
+            <input
+              type="text"
+              name="insulationThickness"
+              value={formData.insulationThickness}
+              onChange={handleChange}
+              placeholder="50мм, 100мм, 150мм..."
+              className={inputClasses}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Тип окон</label>
+            <select
+              name="windows"
+              value={formData.windows}
+              onChange={handleChange}
+              className={inputClasses}
+            >
+              <option value="">Не выбрано</option>
+              <option value="пластиковые">Пластиковые (ПВХ)</option>
+              <option value="деревянные">Деревянные</option>
+              <option value="деревянно-алюминиевые">Деревянно-алюминиевые</option>
+              <option value="другие">Другие</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Тип двери</label>
+            <input
+              type="text"
+              name="doorType"
+              value={formData.doorType}
+              onChange={handleChange}
+              placeholder="Металлическая, деревянная..."
+              className={inputClasses}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 mt-4">
+          <label className="flex items-center gap-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <input
+              type="checkbox"
+              checked={formData.hasMansard}
+              onChange={(e) => handleBooleanChange('hasMansard', e.target.checked)}
+              className="w-4 h-4 text-[#1976d2] focus:ring-[#1976d2]"
+            />
+            <span className="text-gray-700 font-medium">Мансарда</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <input
+              type="checkbox"
+              checked={formData.hasVeranda}
+              onChange={(e) => handleBooleanChange('hasVeranda', e.target.checked)}
+              className="w-4 h-4 text-[#1976d2] focus:ring-[#1976d2]"
+            />
+            <span className="text-gray-700 font-medium">Веранда</span>
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+            <input
+              type="checkbox"
+              checked={formData.hasPorhch}
+              onChange={(e) => handleBooleanChange('hasPorhch', e.target.checked)}
+              className="w-4 h-4 text-[#1976d2] focus:ring-[#1976d2]"
+            />
+            <span className="text-gray-700 font-medium">Крыльцо</span>
+          </label>
+        </div>
+
+        {formData.hasVeranda && (
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Размер веранды</label>
+            <input
+              type="text"
+              name="verandaSize"
+              value={formData.verandaSize}
+              onChange={handleChange}
+              placeholder="Например: 2x4 м"
+              className={inputClasses}
+            />
+          </div>
+        )}
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Основание</label>
+          <select
+            name="baseType"
+            value={formData.baseType}
+            onChange={handleChange}
+            className={inputClasses}
+          >
+            <option value="">Не выбрано</option>
+            <option value="ленточный">Ленточный</option>
+            <option value="свайный">Свайный</option>
+            <option value="плитный">Плитный</option>
+            <option value="столбчатый">Столбчатый</option>
+            <option value="свайно-винтовой">Свайно-винтовой</option>
+            <option value="другое">Другое</option>
+          </select>
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Тип дома</label>
+          <select
+            name="homeType"
+            value={formData.homeType}
+            onChange={handleChange}
+            className={inputClasses}
+          >
+            <option value="">Не выбрано</option>
+            <option value="круглогодичный">Круглогодичный</option>
+            <option value="сезонный">Сезонный</option>
+          </select>
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Тип кровли</label>
+          <select
+            name="roofMaterial"
+            value={formData.roofMaterial}
+            onChange={handleChange}
+            className={inputClasses}
+          >
+            <option value="">Не выбрано</option>
+            <option value="металлочерепица">Металлочерепица</option>
+            <option value="soft roof">Мягкая кровля (Soft Roof)</option>
+            <option value="профнастил">Профнастил</option>
+            <option value="ондулин">Ондулин</option>
+            <option value="еврорубероид">Еврорубероид</option>
+            <option value="деревянная">Деревянная</option>
+            <option value="другая">Другая</option>
+          </select>
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Коммуникации</label>
+          <textarea
+            name="communication"
+            value={formData.communication}
+            onChange={handleTextareaChange}
+            placeholder="Газ, вода, электричество, канализация..."
+            rows={2}
+            className={inputClasses + " resize-none"}
+          />
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Планировка</label>
+          <textarea
+            name="layout"
+            value={formData.layout}
+            onChange={handleTextareaChange}
+            placeholder="1 этаж: прихожая, кухня, гостиная...\n2 этаж: спальни, ванные..."
+            rows={4}
+            className={inputClasses + " resize-none"}
+          />
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Описание</label>
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleTextareaChange}
+            placeholder="Дополнительное описание объекта..."
+            rows={3}
+            className={inputClasses + " resize-none"}
           />
         </div>
       </div>
