@@ -30,7 +30,7 @@ export function NotificationBell() {
           e.stopPropagation();
           toggleOpen();
         }}
-        className={`relative p-2 text-gray-600 hover:text-[#1976d2] hover:bg-gray-100 rounded-lg transition-all mr-2 ${
+        className={`relative p-2 text-gray-600 dark:text-slate-300 dark:text-slate-300 hover:text-[#1976d2] hover:bg-gray-100 dark:hover:bg-slate-600 dark:bg-slate-700 dark:hover:bg-slate-700 rounded-lg transition-all mr-2 ${
           shouldAnimate ? 'animate-bounce' : ''
         }`}
         title="Уведомления"

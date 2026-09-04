@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { Project, Brigade, ProjectMaterial, ProjectCompletedWork, UnitRate as ProjectUnitRate, CreateProjectInput, UpdateProjectInput } from '@/shared/types/project';
+import { apiFetch, createQueryUrl, ApiResponse } from '@/shared/lib/api-client';
 
 interface ProjectState {
   // Данные
@@ -10,6 +11,7 @@ interface ProjectState {
   completedWorks: ProjectCompletedWork[];
   materialTemplates: Array<{ id: number; name: string; quantity: string; cost: number; category?: string | null; isSystem: boolean }>;
   workTemplates: Array<{ id: number; name: string; quantity: string; cost: number; category?: string | null; isSystem: boolean }>;
+  workUnitRates: Array<{ id: number; name: string; quantity: string; cost: number; category?: string | null }>;
   
   // Состояние загрузки
   loading: boolean;
@@ -27,20 +29,10 @@ interface ProjectState {
   fetchProjectCompletedWorks: (projectId: number) => Promise<void>;
   fetchMaterialTemplates: () => Promise<void>;
   fetchWorkTemplates: () => Promise<void>;
+  fetchWorkUnitRates: () => Promise<void>;
 }
 
-async function apiFetch(url: string, options?: RequestInit) {
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    console.error('API Error:', res.status, JSON.stringify(body, null, 2));
-    throw new Error(body.error || `API error: ${res.status}`);
-  }
-  return res.json();
-}
+
 
 export const useProjectStore = create<ProjectState>((set, get) => ({
   projects: [],
@@ -50,14 +42,15 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   completedWorks: [],
   materialTemplates: [],
   workTemplates: [],
+  workUnitRates: [],
   loading: false,
   error: null,
   
   fetchProjects: async () => {
     set({ loading: true, error: null });
     try {
-      const { data } = await apiFetch('/api/projects');
-      set({ projects: data as Project[], loading: false, error: null });
+      const { data } = await apiFetch<ApiResponse<Project[]>>('/api/projects');
+      set({ projects: data!, loading: false, error: null });
     } catch (e: any) {
       set({ error: e.message, loading: false });
     }
@@ -65,8 +58,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   
   fetchBrigades: async () => {
     try {
-      const { data } = await apiFetch('/api/brigades');
-      set({ brigades: data as Brigade[] });
+      const { data } = await apiFetch<ApiResponse<Brigade[]>>('/api/brigades');
+      set({ brigades: data! });
     } catch (e: any) {
       set({ error: e.message });
     }
@@ -74,8 +67,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   
   fetchUnitRates: async () => {
     try {
-      const { data } = await apiFetch('/api/unit-rates');
-      set({ unitRates: data as ProjectUnitRate[] });
+      const { data } = await apiFetch<ApiResponse<ProjectUnitRate[]>>('/api/unit-rates');
+      set({ unitRates: data! });
     } catch (e: any) {
       set({ error: e.message });
     }
@@ -84,8 +77,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   fetchProjectDetail: async (id: number) => {
     set({ loading: true, error: null });
     try {
-      const { data } = await apiFetch(`/api/projects/${id}`);
-      const project = data as Project;
+      const { data } = await apiFetch<ApiResponse<Project>>(`/api/projects/${id}`);
+      const project = data!;
       
       // Обновить проект в списке
       set((s) => ({
@@ -101,12 +94,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   createProject: async (data: CreateProjectInput) => {
     set({ loading: true, error: null });
     try {
-      const { data: created } = await apiFetch('/api/projects', {
+      const { data: created } = await apiFetch<ApiResponse<Project>>('/api/projects', {
         method: 'POST',
         body: JSON.stringify(data),
       });
       set((s) => ({
-        projects: [created as Project, ...s.projects],
+        projects: [created!, ...s.projects],
         loading: false,
         error: null,
       }));
@@ -119,12 +112,12 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   updateProject: async (id: number, data: UpdateProjectInput) => {
     set({ loading: true, error: null });
     try {
-      const { data: updated } = await apiFetch(`/api/projects/${id}`, {
+      const { data: updated } = await apiFetch<ApiResponse<Project>>(`/api/projects/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
       set((s) => ({
-        projects: s.projects.map(p => p.id === id ? updated as Project : p),
+        projects: s.projects.map(p => p.id === id ? updated! : p),
         loading: false,
         error: null,
       }));
@@ -151,8 +144,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   
   fetchProjectMaterials: async (projectId: number) => {
     try {
-      const { data } = await apiFetch(`/api/material-estimates?projectId=${projectId}`);
-      set({ materials: data as ProjectMaterial[] });
+      const { data } = await apiFetch<ApiResponse<ProjectMaterial[]>>(createQueryUrl('/api/material-estimates', { projectId }));
+      set({ materials: data! });
     } catch (e: any) {
       set({ error: e.message });
     }
@@ -160,8 +153,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   
   fetchProjectCompletedWorks: async (projectId: number) => {
     try {
-      const { data } = await apiFetch(`/api/completed-works?projectId=${projectId}`);
-      set({ completedWorks: data as ProjectCompletedWork[] });
+      const { data } = await apiFetch<ApiResponse<ProjectCompletedWork[]>>(createQueryUrl('/api/completed-works', { projectId }));
+      set({ completedWorks: data! });
     } catch (e: any) {
       set({ error: e.message });
     }
@@ -169,8 +162,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   
   fetchMaterialTemplates: async () => {
     try {
-      const { data } = await apiFetch('/api/material-templates');
-      set({ materialTemplates: data });
+      const { data } = await apiFetch<ApiResponse<Array<{ id: number; name: string; quantity: string; cost: number; category?: string | null; isSystem: boolean }>>>('/api/material-templates');
+      set({ materialTemplates: data! });
     } catch (e: any) {
       set({ error: e.message });
     }
@@ -178,8 +171,23 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   
   fetchWorkTemplates: async () => {
     try {
-      const { data } = await apiFetch('/api/work-templates');
-      set({ workTemplates: data });
+      const { data } = await apiFetch<ApiResponse<Array<{ id: number; name: string; quantity: string; cost: number; category?: string | null; isSystem: boolean }>>>('/api/work-templates');
+      set({ workTemplates: data! });
+    } catch (e: any) {
+      set({ error: e.message });
+    }
+  },
+  
+  fetchWorkUnitRates: async () => {
+    try {
+      const { data } = await apiFetch<ApiResponse<ProjectUnitRate[]>>(createQueryUrl('/api/unit-rates', { targetType: 'client' }));
+      set({ workUnitRates: (data ?? []).map((ur) => ({
+        id: ur.id,
+        name: ur.name,
+        quantity: ur.unit || 'м²',
+        cost: Math.round(ur.pricePerUnit),
+        category: ur.category || null,
+      }))});
     } catch (e: any) {
       set({ error: e.message });
     }

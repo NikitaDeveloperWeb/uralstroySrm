@@ -1,33 +1,16 @@
 import { create } from 'zustand';
 import type { Client } from '@/shared/types/client';
+import { apiFetch, createQueryUrl, ApiResponse } from '@/shared/lib/api-client';
 
 interface ClientStore {
-  // Данные
   clients: Client[];
-  
-  // Состояние загрузки
   loading: boolean;
   error: string | null;
   
-  // Actions
   fetchClients: (search?: string) => Promise<void>;
   createClient: (data: Partial<Client>) => Promise<void>;
   updateClient: (id: number, data: Partial<Client>) => Promise<void>;
   deleteClient: (id: number) => Promise<void>;
-}
-
-async function apiFetch(url: string, options?: RequestInit) {
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `API error: ${res.status}`);
-  }
-  // DELETE возвращает 204 без тела
-  if (res.status === 204) return null;
-  return res.json();
 }
 
 export const useClientStore = create<ClientStore>((set) => ({
@@ -38,28 +21,27 @@ export const useClientStore = create<ClientStore>((set) => ({
   fetchClients: async (search?: string) => {
     set({ loading: true, error: null });
     try {
-      const url = search ? `/api/clients?search=${encodeURIComponent(search)}` : '/api/clients';
-      const { data } = await apiFetch(url);
-      set({ clients: data as Client[], loading: false, error: null });
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+      const { data } = await apiFetch<ApiResponse<Client[]>>(createQueryUrl('/api/clients', search ? { search } : undefined));
+      set({ clients: data ?? [], loading: false, error: null });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
     }
   },
   
   createClient: async (data) => {
     set({ loading: true, error: null });
     try {
-      const { data: created } = await apiFetch('/api/clients', {
+      const { data: created } = await apiFetch<ApiResponse<Client>>('/api/clients', {
         method: 'POST',
         body: JSON.stringify(data),
       });
       set((s) => ({
-        clients: [created as Client, ...s.clients],
+        clients: [created!, ...s.clients],
         loading: false,
         error: null,
       }));
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
       throw e;
     }
   },
@@ -67,17 +49,17 @@ export const useClientStore = create<ClientStore>((set) => ({
   updateClient: async (id, data) => {
     set({ loading: true, error: null });
     try {
-      const { data: updated } = await apiFetch(`/api/clients/${id}`, {
+      const { data: updated } = await apiFetch<ApiResponse<Client>>(`/api/clients/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
       set((s) => ({
-        clients: s.clients.map(c => c.id === id ? updated as Client : c),
+        clients: s.clients.map(c => c.id === id ? updated! : c),
         loading: false,
         error: null,
       }));
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
       throw e;
     }
   },
@@ -91,8 +73,8 @@ export const useClientStore = create<ClientStore>((set) => ({
         loading: false,
         error: null,
       }));
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
       throw e;
     }
   },

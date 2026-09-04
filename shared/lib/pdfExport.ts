@@ -1,7 +1,8 @@
+import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import type { ReportEntry } from '@/app/reports/page';
 
-interface ReportExportData {
+interface ReportEntry {
+  id: number;
   type: string;
   date: string;
   periodStart: string;
@@ -20,272 +21,160 @@ interface ReportExportData {
     стропила: number;
     обшивкаСтропил: number;
   };
+  totalAmount?: number;
+  items?: Array<{
+    id?: number;
+    workName: string;
+    quantity: number;
+    rate: number;
+    amount: number;
+  }>;
 }
 
-const typeLabels: Record<string, string> = {
-  цех: 'Отчет цеха',
-  монтаж: 'Отчет монтажа',
-  склад: 'Отчет складлера',
-};
-
-const typeColors: Record<string, [number, number, number]> = {
-  цех: [59, 130, 246],
-  монтаж: [147, 51, 234],
-  склад: [34, 197, 94],
-};
-
-export function exportReportsToPDF(reports: ReportEntry[]) {
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 20;
-  const contentWidth = pageWidth - margin * 2;
-  let y = 20;
-
-  // Header
-  doc.setFontSize(20);
-  doc.setTextColor(26, 26, 26);
-  doc.text('Отчеты УралСтройCRM', pageWidth / 2, y, { align: 'center' });
-  
-  y += 10;
-  doc.setFontSize(10);
-  doc.setTextColor(100, 100, 100);
-  doc.text(`Дата формирования: ${new Date().toLocaleDateString('ru-RU')}`, pageWidth / 2, y, { align: 'center' });
-  
-  y += 15;
-  doc.setDrawColor(200, 200, 200);
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 15;
-
-  reports.forEach((report, index) => {
-    // Check if we need a new page
-    if (y > 250) {
-      doc.addPage();
-      y = 20;
-    }
-
-    // Report header with color
-    const color = typeColors[report.type] || [150, 150, 150];
-    doc.setFillColor(color[0], color[1], color[2]);
-    doc.roundedRect(margin, y, contentWidth, 10, 2, 2, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(12);
-    doc.text(typeLabels[report.type] || report.type, margin + 5, y + 7);
-    y += 15;
-
-    // Report number
-    doc.setTextColor(100, 100, 100);
-    doc.setFontSize(9);
-    doc.text(`Отчет №${report.id}`, pageWidth - margin, y, { align: 'right' });
-    y += 8;
-
-    // Period
-    doc.setFontSize(10);
-    doc.setTextColor(60, 60, 60);
-    doc.text(`Период:`, margin, y);
-    doc.setTextColor(40, 40, 40);
-    doc.text(
-      `${new Date(report.periodStart).toLocaleDateString('ru-RU')} - ${new Date(report.periodEnd).toLocaleDateString('ru-RU')}`,
-      margin + 25,
-      y
-    );
-    y += 7;
-
-    // Date
-    doc.setTextColor(60, 60, 60);
-    doc.text(`Дата составления:`, margin, y);
-    doc.setTextColor(40, 40, 40);
-    doc.text(new Date(report.date).toLocaleDateString('ru-RU'), margin + 40, y);
-    y += 10;
-
-    // Employee (if цех)
-    if (report.type === 'цех' && report.employeeName) {
-      doc.setTextColor(60, 60, 60);
-      doc.text(`Сотрудник:`, margin, y);
-      doc.setTextColor(40, 40, 40);
-      doc.text(report.employeeName, margin + 25, y);
-      y += 7;
-      
-      if (report.employeePaymentType === 'сдельная') {
-        // Square meters for piece rate
-        if (report.squareMeters) {
-          const m = report.squareMeters;
-          const values = [
-            { label: 'Сосна', value: m.сосна },
-            { label: 'Липа', value: m.липа },
-            { label: 'Утепление', value: m.утепление },
-            { label: 'Каркасы', value: m.каркасы },
-            { label: 'Стропила', value: m.стропила },
-            { label: 'Обшивка стропил', value: m.обшивкаСтропил },
-          ].filter(item => item.value > 0);
-
-          if (values.length > 0) {
-            doc.setTextColor(60, 60, 60);
-            doc.text(`Квадратура (м²):`, margin, y);
-            y += 6;
-            doc.setTextColor(40, 40, 40);
-            doc.setFontSize(9);
-            values.forEach((item, i) => {
-              if (y > 270) {
-                doc.addPage();
-                y = 20;
-              }
-              doc.text(`• ${item.label}: ${item.value} м²`, margin + 5, y);
-              y += 5;
-            });
-            doc.setFontSize(10);
-            y += 3;
-          }
-        }
-
-        // Calculate earnings
-        const workTypeRates: Record<string, number> = {
-          сосна: 350,
-          липа: 400,
-          утепление: 400,
-          каркасы: 1000,
-          стропила: 900,
-          обшивкаСтропил: 300,
-        };
-        let total = 0;
-        if (report.squareMeters) {
-          for (const [key, value] of Object.entries(report.squareMeters)) {
-            total += value * (workTypeRates[key] || 0);
-          }
-        }
-        if (total > 0) {
-          doc.setTextColor(34, 197, 94);
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.text(`Заработок: ${total.toLocaleString('ru-RU')} ₽`, margin, y);
-          doc.setFont('helvetica', 'normal');
-          y += 10;
-        }
-      } else if (report.employeePaymentType === 'сменная' && report.hours) {
-        const dailyRate = 2000;
-        const earnings = report.hours * dailyRate;
-        
-        doc.setTextColor(60, 60, 60);
-        doc.text(`Часов: ${report.hours}`, margin, y);
-        y += 7;
-        
-        doc.setTextColor(34, 197, 94);
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Заработок: ${earnings.toLocaleString('ru-RU')} ₽`, margin, y);
-        doc.setFont('helvetica', 'normal');
-        y += 10;
-      }
-    }
-
-    // Work done
-    if (y > 260) {
-      doc.addPage();
-      y = 20;
-    }
-    doc.setTextColor(60, 60, 60);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Выполненные работы:', margin, y);
-    doc.setFont('helvetica', 'normal');
-    y += 7;
-    doc.setTextColor(40, 40, 40);
-    
-    const workLines = doc.splitTextToSize(report.workDone, contentWidth - 10);
-    workLines.forEach((line: string) => {
-      if (y > 275) {
-        doc.addPage();
-        y = 20;
-      }
-      doc.text(line, margin + 5, y);
-      y += 5;
-    });
-    y += 5;
-
-    // Materials
-    if (report.materials) {
-      if (y > 265) {
-        doc.addPage();
-        y = 20;
-      }
-      doc.setTextColor(60, 60, 60);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Материалы:', margin, y);
-      doc.setFont('helvetica', 'normal');
-      y += 7;
-      doc.setTextColor(40, 40, 40);
-      
-      const matLines = doc.splitTextToSize(report.materials, contentWidth - 10);
-      matLines.forEach((line: string) => {
-        if (y > 275) {
-          doc.addPage();
-          y = 20;
-        }
-        doc.text(line, margin + 5, y);
-        y += 5;
-      });
-      y += 5;
-    }
-
-    // Notes
-    if (report.notes) {
-      if (y > 265) {
-        doc.addPage();
-        y = 20;
-      }
-      doc.setTextColor(60, 60, 60);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Примечания:', margin, y);
-      doc.setFont('helvetica', 'normal');
-      y += 7;
-      doc.setTextColor(40, 40, 40);
-      
-      const noteLines = doc.splitTextToSize(report.notes, contentWidth - 10);
-      noteLines.forEach((line: string) => {
-        if (y > 275) {
-          doc.addPage();
-          y = 20;
-        }
-        doc.text(line, margin + 5, y);
-        y += 5;
-      });
-      y += 5;
-    }
-
-    // Separator
-    if (index < reports.length - 1) {
-      if (y > 250) {
-        doc.addPage();
-        y = 20;
-      }
-      doc.setDrawColor(220, 220, 220);
-      doc.setLineWidth(0.5);
-      doc.line(margin, y, pageWidth - margin, y);
-      y += 15;
-    }
-  });
-
-  // Footer on each page
-  const totalPages = doc.getNumberOfPages();
-  for (let i = 1; i <= totalPages; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    doc.text(
-      `Страница ${i} из ${totalPages}`,
-      pageWidth / 2,
-      doc.internal.pageSize.getHeight() - 10,
-      { align: 'center' }
-    );
-    doc.text(
-      'УралСтройCRM',
-      pageWidth - margin,
-      doc.internal.pageSize.getHeight() - 10
-    );
+export async function exportReportsToPDF(reports: ReportEntry[]) {
+  if (!reports || reports.length === 0) {
+    console.warn('Нет данных для экспорта в PDF');
+    return;
   }
 
-  doc.save(`reports_${new Date().toISOString().split('T')[0]}.pdf`);
+  // Создаем iframe для изоляции контента от страницы
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.right = '0';
+  iframe.style.bottom = '0';
+  iframe.style.width = '0';
+  iframe.style.height = '0';
+  iframe.style.border = '0';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument!;
+  doc.open();
+
+  let html = `
+    <div style="text-align: center; margin-bottom: 12px;">
+      <h1 style="font-size: 14px; color: #1976d2; margin: 0;">Отчеты УралСтройCRM</h1>
+      <p style="font-size: 9px; color: #666; margin: 4px 0 0 0;">Дата формирования: ${new Date().toLocaleDateString('ru-RU')}</p>
+    </div>
+    <hr style="border: 1px solid #ddd; margin-bottom: 10px;">
+  `;
+
+  reports.forEach((report, index) => {
+    html += `
+      <div style="margin-bottom: 12px; page-break-inside: avoid; font-size: 9px;">
+        <div style="background: #1976d2; color: white; padding: 5px; border-radius: 3px; margin-bottom: 6px; font-size: 9px;">
+          <strong>${report.type === 'цех' ? 'Отчет цеха' : report.type}</strong>
+        </div>
+        <div style="margin-bottom: 5px; font-size: 9px;">
+          <span style="color: #666;">Отчет №${report.id}</span>
+          <span style="float: right; color: #666;">Период: ${new Date(report.periodStart).toLocaleDateString('ru-RU')} - ${new Date(report.periodEnd).toLocaleDateString('ru-RU')}</span>
+        </div>
+        <div style="margin-bottom: 5px; font-size: 9px;">
+          <span style="color: #666;">Дата составления: ${new Date(report.date).toLocaleDateString('ru-RU')}</span>
+        </div>
+        ${report.employeeName ? `<div style="margin-bottom: 5px; font-size: 9px;"><strong>Сотрудник:</strong> ${report.employeeName}</div>` : ''}
+        ${report.totalAmount ? `<div style="margin-bottom: 5px; font-size: 9px;"><strong>Заработок:</strong> <span style="color: #2e7d32; font-size: 11px;">${report.totalAmount.toLocaleString('ru-RU')} ₽</span></div>` : ''}
+        ${report.items && report.items.length > 0 ? `
+          <div style="margin-bottom: 5px; font-size: 9px;">
+            <strong>Детализация:</strong>
+            <table style="width: 100%; margin-top: 5px; border-collapse: collapse; font-size: 9px;">
+              <thead>
+                <tr style="background: #f5f5f5;">
+                  <th style="padding: 4px; border: 1px solid #ddd; text-align: left;">Работа</th>
+                  <th style="padding: 4px; border: 1px solid #ddd; text-align: right;">Кол-во</th>
+                  <th style="padding: 4px; border: 1px solid #ddd; text-align: right;">Ставка</th>
+                  <th style="padding: 4px; border: 1px solid #ddd; text-align: right;">Сумма</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${report.items.map(item => `
+                  <tr>
+                    <td style="padding: 3px; border: 1px solid #ddd;">${item.workName}</td>
+                    <td style="padding: 3px; border: 1px solid #ddd; text-align: right;">${item.quantity}</td>
+                    <td style="padding: 3px; border: 1px solid #ddd; text-align: right;">${item.rate.toLocaleString('ru-RU')} ₽</td>
+                    <td style="padding: 3px; border: 1px solid #ddd; text-align: right;"><strong>${item.amount.toLocaleString('ru-RU')} ₽</strong></td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : ''}
+        ${report.workDone ? `<div style="margin-bottom: 5px; font-size: 9px;"><strong>Выполненные работы:</strong><br>${report.workDone}</div>` : ''}
+        ${report.materials ? `<div style="margin-bottom: 5px; font-size: 9px;"><strong>Материалы:</strong><br>${report.materials}</div>` : ''}
+        ${report.notes ? `<div style="margin-bottom: 5px; font-size: 9px;"><strong>Примечания:</strong><br>${report.notes}</div>` : ''}
+        ${index < reports.length - 1 ? '<hr style="border: 1px solid #eee; margin-top: 10px;">' : ''}
+      </div>
+    `;
+  });
+
+  doc.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        @media print {
+          @page { margin: 0; size: A4; }
+          body { margin: 0; padding: 0; }
+        }
+      </style>
+    </head>
+    <body style="font-family: Arial, sans-serif; padding: 20px; background: #fff; color: #000;">
+      ${html}
+    </body>
+    </html>
+  `);
+  doc.close();
+
+  // Ждем загрузки iframe
+  await new Promise(resolve => setTimeout(resolve, 500));
+
+  const iframeBody = iframe.contentDocument?.body;
+  if (!iframeBody) {
+    console.error('❌ Не удалось получить body iframe');
+    document.body.removeChild(iframe);
+    return;
+  }
+
+  console.log('📄 Iframe content loaded, trying html2canvas...');
+
+  try {
+    const canvas = await html2canvas(iframeBody, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+      foreignObjectRendering: false,
+    });
+
+    console.log('📊 Canvas:', {
+      width: canvas.width,
+      height: canvas.height,
+      isEmpty: canvas.width === 0 || canvas.height === 0,
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    
+    if (!imgData || imgData.length < 100 || canvas.width === 0 || canvas.height === 0) {
+      console.error('❌ html2canvas вернул пустой canvas');
+      document.body.removeChild(iframe);
+      return;
+    }
+
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+
+    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.save(`reports_${new Date().toISOString().split('T')[0]}.pdf`);
+    console.log('✅ PDF saved successfully');
+  } catch (error) {
+    console.error('❌ Ошибка экспорта в PDF:', error);
+  } finally {
+    if (iframe.parentNode) {
+      document.body.removeChild(iframe);
+    }
+  }
 }
 
-export function exportSingleReportToPDF(report: ReportEntry) {
-  exportReportsToPDF([report]);
+export async function exportSingleReportToPDF(report: ReportEntry) {
+  await exportReportsToPDF([report]);
 }

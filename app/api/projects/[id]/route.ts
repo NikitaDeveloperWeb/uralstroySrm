@@ -151,6 +151,23 @@ export async function DELETE(
       return errorResponse('Некорректный ID проекта', 400);
     }
 
+    // Каскадное удаление связанных записей
+    await prisma.materialEstimate.deleteMany({
+      where: { projectId },
+    });
+    await prisma.completedWork.deleteMany({
+      where: { projectId },
+    });
+    await prisma.projectOverhead.deleteMany({
+      where: { projectId },
+    });
+    await prisma.projectTransaction.deleteMany({
+      where: { projectId },
+    });
+    await prisma.projectReport.deleteMany({
+      where: { projectId },
+    });
+
     await prisma.project.delete({
       where: { id: projectId },
     });

@@ -1,71 +1,80 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { successResponse, errorResponse, handlePrismaError, deletedResponse } from '@/shared/lib/api-response';
+import { errorResponse, handlePrismaError, successResponse } from '@/shared/lib/api-response';
 import { updateMaterialEstimateSchema } from '@/shared/lib/validators';
 
-// GET /api/material-estimates/[id] - получить смету материала по ID
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params;
-    const estimate = await prisma.materialEstimate.findUnique({
-      where: { id: Number(id) },
-      include: {
-        project: true,
-      },
-    });
-
-    if (!estimate) {
-      return errorResponse('Смета материала не найдена', 404);
-    }
-
-    return successResponse(estimate);
-  } catch (error) {
-    console.error('GET /api/material-estimates/[id] error:', error);
-    return errorResponse('Не удалось получить смету материала', 500);
-  }
-}
-
-// PATCH /api/material-estimates/[id] - обновить смету материала
+// PATCH /api/material-estimates/[id] - обновить отдельную запись
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) {
+      return errorResponse('Некорректный ID', 400);
+    }
+
     const body = await request.json();
-    const validated = updateMaterialEstimateSchema.parse(body);
+    console.log('PATCH body:', JSON.stringify(body));
+
+    let validated;
+    try {
+      validated = updateMaterialEstimateSchema.parse(body);
+      console.log('PATCH validated:', JSON.stringify(validated));
+    } catch (validationError) {
+      console.error('PATCH validation error:', validationError);
+      if (validationError instanceof Error) {
+        return errorResponse(validationError.message, 400);
+      }
+      return errorResponse('Ошибка валидации', 400);
+    }
+
+    const existing = await prisma.materialEstimate.findUnique({ where: { id: numericId } });
+    if (!existing) {
+      return errorResponse('Запись не найдена', 404);
+    }
 
     const estimate = await prisma.materialEstimate.update({
-      where: { id: Number(id) },
-      data: validated,
-      include: {
-        project: true,
+      where: { id: numericId },
+      data: {
+        name: validated.name ?? existing.name,
+        quantity: validated.quantity ?? existing.quantity,
+        cost: validated.cost ?? existing.cost,
+        category: validated.category ?? existing.category,
       },
+      include: { project: true },
     });
 
     return successResponse(estimate);
   } catch (error) {
-    console.error('PATCH /api/material-estimates/[id] error:', error);
+    if (error instanceof Error) {
+      return errorResponse(error.message, 400);
+    }
     return handlePrismaError(error);
   }
 }
 
-// DELETE /api/material-estimates/[id] - удалить смету материала
+// DELETE /api/material-estimates/[id] - удалить запись
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+    const numericId = parseInt(id, 10);
+    if (isNaN(numericId)) {
+      return errorResponse('Некорректный ID', 400);
+    }
 
-    await prisma.materialEstimate.delete({
-      where: { id: Number(id) },
-    });
+    const existing = await prisma.materialEstimate.findUnique({ where: { id: numericId } });
+    if (!existing) {
+      return errorResponse('Запись не найдена', 404);
+    }
 
-    return deletedResponse();
+    await prisma.materialEstimate.delete({ where: { id: numericId } });
+
+    return successResponse({ deleted: true });
   } catch (error) {
     console.error('DELETE /api/material-estimates/[id] error:', error);
     return handlePrismaError(error);

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { ProjectTransaction } from '@/shared/types/project';
+import { apiFetch, ApiResponse } from '@/shared/lib/api-client';
 
 interface CreateTransactionInput {
   projectId: number;
@@ -26,7 +27,7 @@ interface ProjectTransactionState {
   clearError: () => void;
 }
 
-export const useProjectTransactionStore = create<ProjectTransactionState>((set, get) => ({
+export const useProjectTransactionStore = create<ProjectTransactionState>((set) => ({
   transactions: [],
   loading: false,
   error: null,
@@ -34,28 +35,18 @@ export const useProjectTransactionStore = create<ProjectTransactionState>((set, 
   fetchTransactions: async (projectId: number) => {
     try {
       set({ loading: true, error: null });
-      
-      const response = await fetch(`/api/projects/${projectId}/transactions`);
-      
-      if (!response.ok) {
-        throw new Error('Не удалось загрузить транзакции');
-      }
-      
-      const data = await response.json();
-      set({ transactions: data.success ? data.data : [], loading: false });
+      const { data } = await apiFetch<ApiResponse<ProjectTransaction[]>>(`/api/projects/${projectId}/transactions`);
+      set({ transactions: data ?? [], loading: false });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Произошла ошибка';
-      set({ error: message, loading: false });
+      set({ error: (error as Error).message, loading: false });
     }
   },
 
-  createTransaction: async (data: CreateTransactionInput) => {
+  createTransaction: async (data) => {
     try {
       set({ loading: true, error: null });
-      
-      const response = await fetch(`/api/projects/${data.projectId}/transactions`, {
+      const { data: created } = await apiFetch<ApiResponse<ProjectTransaction>>(`/api/projects/${data.projectId}/transactions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectId: data.projectId,
           amount: data.amount,
@@ -63,86 +54,43 @@ export const useProjectTransactionStore = create<ProjectTransactionState>((set, 
           comment: data.comment,
         }),
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('API Error:', response.status, errorData);
-        throw new Error(errorData.message || `Ошибка ${response.status}: не удалось создать транзакцию`);
-      }
-      
-      const result = await response.json();
-      const newTransaction = result.success ? result.data : null;
-      
-      if (newTransaction) {
-        set((state) => ({
-          transactions: [...state.transactions, newTransaction],
-          loading: false,
-        }));
-      }
+      set((state) => ({
+        transactions: [...state.transactions, created!],
+        loading: false,
+      }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Произошла ошибка';
-      set({ error: message, loading: false });
+      set({ error: (error as Error).message, loading: false });
       throw error;
     }
   },
 
-  updateTransaction: async (projectId: number, id: number, data: UpdateTransactionInput) => {
+  updateTransaction: async (projectId, id, data) => {
     try {
       set({ loading: true, error: null });
-      
-      const response = await fetch(`/api/projects/${projectId}/transactions/${id}`, {
+      const { data: updated } = await apiFetch<ApiResponse<ProjectTransaction>>(`/api/projects/${projectId}/transactions/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...(data.amount !== undefined && { amount: data.amount }),
-          ...(data.date !== undefined && { date: data.date }),
-          ...(data.comment !== undefined && { comment: data.comment }),
-        }),
+        body: JSON.stringify(data),
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Не удалось обновить транзакцию');
-      }
-      
-      const result = await response.json();
-      const updatedTransaction = result.success ? result.data : null;
-      
-      if (updatedTransaction) {
-        set((state) => ({
-          transactions: state.transactions.map(t => 
-            t.id === id ? updatedTransaction : t
-          ),
-          loading: false,
-        }));
-      }
+      set((state) => ({
+        transactions: state.transactions.map(t => t.id === id ? updated! : t),
+        loading: false,
+      }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Произошла ошибка';
-      set({ error: message, loading: false });
+      set({ error: (error as Error).message, loading: false });
       throw error;
     }
   },
 
-  deleteTransaction: async (projectId: number, id: number) => {
+  deleteTransaction: async (projectId, id) => {
     try {
       set({ loading: true, error: null });
-      
-      const response = await fetch(`/api/projects/${projectId}/transactions/${id}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Не удалось удалить транзакцию');
-      }
-      
+      await apiFetch(`/api/projects/${projectId}/transactions/${id}`, { method: 'DELETE' });
       set((state) => ({
         transactions: state.transactions.filter(t => t.id !== id),
         loading: false,
       }));
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Произошла ошибка';
-      set({ error: message, loading: false });
+      set({ error: (error as Error).message, loading: false });
       throw error;
     }
   },

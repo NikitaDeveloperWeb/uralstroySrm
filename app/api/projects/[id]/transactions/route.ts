@@ -41,7 +41,17 @@ export async function POST(
       return errorResponse('Некорректный ID проекта', 400);
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      return errorResponse('Некорректный формат JSON', 400);
+    }
+    
+    console.log('[Transaction] Received body:', body);
+    console.log('[Transaction] ProjectId:', projectId);
+    
     const validation = createProjectTransactionSchema.safeParse(body);
 
     if (!validation.success) {
@@ -50,6 +60,16 @@ export async function POST(
     }
 
     const { amount, date, comment } = validation.data;
+
+    // Проверяем что amount не NaN
+    if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
+      return errorResponse('Некорректная сумма', 400);
+    }
+
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) {
+      return errorResponse('Некорректная дата', 400);
+    }
 
     // Проверим, есть ли уже транзакции у проекта
     const existingTransactions = await prisma.projectTransaction.findMany({
@@ -65,7 +85,7 @@ export async function POST(
         data: {
           projectId,
           amount,
-          date: new Date(date),
+          date: dateObj,
           comment: comment || null,
         },
       });
@@ -82,7 +102,7 @@ export async function POST(
           where: { id: projectId },
           data: {
             prepayment: amount,
-            prepaymentDate: new Date(date),
+            prepaymentDate: dateObj,
           },
         });
       }

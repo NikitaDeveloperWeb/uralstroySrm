@@ -41,7 +41,19 @@ export async function PATCH(
 
     const employee = await prisma.employee.update({
       where: { id: Number(id) },
-      data: validated,
+      data: {
+        ...(validated.fullName !== undefined && { fullName: validated.fullName }),
+        ...(validated.birthDate !== undefined && { birthDate: validated.birthDate }),
+        ...(validated.phone !== undefined && { phone: validated.phone }),
+        ...(validated.address !== undefined && { address: validated.address }),
+        ...(validated.hireDate !== undefined && { hireDate: validated.hireDate }),
+        ...(validated.workplace !== undefined && { workplace: validated.workplace }),
+        ...(validated.paymentType !== undefined && { paymentType: validated.paymentType }),
+        ...(validated.employmentType !== undefined && { employmentType: validated.employmentType }),
+        ...(validated.brigadeId !== undefined && { brigadeId: validated.brigadeId }),
+        ...(validated.hourlyRateId !== undefined && { hourlyRateId: validated.hourlyRateId }),
+        ...(validated.skillIds && validated.skillIds.length > 0 && { skills: { connect: validated.skillIds.map((id: number) => ({ id })) } }),
+      },
       include: {
         brigade: true,
         workReports: true,

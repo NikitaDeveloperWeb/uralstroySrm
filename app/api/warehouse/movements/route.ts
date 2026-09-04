@@ -10,6 +10,7 @@ export async function GET() {
     const movements = await prisma.warehouseMovement.findMany({
       include: {
         item: true,
+        supplier: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -55,10 +56,12 @@ export async function POST(request: NextRequest) {
           itemId: validated.itemId,
           type: validated.type,
           quantity: validated.quantity,
+          amount: validated.amount,
           date: validated.date,
           comment: validated.comment,
+          supplierId: validated.supplierId,
         },
-        include: { item: true },
+        include: { item: true, supplier: true },
       });
 
       await tx.warehouseItem.update({

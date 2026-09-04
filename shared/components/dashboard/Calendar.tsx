@@ -53,25 +53,25 @@ export function Calendar() {
   };
 
   return (
-    <div className="w-72 bg-white rounded-lg shadow-xl border border-gray-200 p-4">
+    <div className="w-72 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 p-4">
       <div className="flex justify-between items-center mb-4">
-        <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-          <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <button onClick={prevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-600 dark:bg-slate-700 rounded-lg transition-colors">
+          <svg className="w-5 h-5 text-gray-600 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
         <div className="text-center">
-          <p className="text-lg font-bold text-gray-900">{months[month]} {year}</p>
+          <p className="text-lg font-bold text-gray-900 dark:text-white">{months[month]} {year}</p>
         </div>
-        <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-          <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <button onClick={nextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-600 dark:bg-slate-700 rounded-lg transition-colors">
+          <svg className="w-5 h-5 text-gray-600 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
       </div>
       <div className="grid grid-cols-7 gap-1 mb-2">
         {daysOfWeek.map((day, index) => (
-          <div key={index} className="text-center py-2 text-sm font-semibold text-gray-600">
+          <div key={index} className="text-center py-2 text-sm font-semibold text-gray-600 dark:text-slate-300">
             {day}
           </div>
         ))}
@@ -92,7 +92,7 @@ export function Calendar() {
                   ? 'bg-[#1976d2] text-white font-semibold'
                   : selected
                   ? 'bg-[#1976d2] text-white'
-                  : 'hover:bg-gray-100 text-gray-700'
+                  : 'hover:bg-gray-100 dark:hover:bg-slate-600 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
               }`}
             >
               {date.getDate()}

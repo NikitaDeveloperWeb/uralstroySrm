@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
         brigade: true,
         workReports: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { fullName: 'asc' },
     });
 
     return successResponse(employees);
@@ -35,7 +35,19 @@ export async function POST(request: NextRequest) {
     const validated = createEmployeeSchema.parse(body);
 
     const employee = await prisma.employee.create({
-      data: validated,
+      data: {
+        fullName: validated.fullName,
+        birthDate: validated.birthDate,
+        phone: validated.phone,
+        address: validated.address,
+        hireDate: validated.hireDate,
+        workplace: validated.workplace,
+        paymentType: validated.paymentType,
+        employmentType: validated.employmentType,
+        ...(validated.brigadeId !== undefined && { brigadeId: validated.brigadeId }),
+        ...(validated.hourlyRateId !== undefined && validated.hourlyRateId !== null && validated.hourlyRateId > 0 && { hourlyRateId: validated.hourlyRateId }),
+        ...(validated.skillIds.length > 0 && { skills: { connect: validated.skillIds.map((id) => ({ id })) } }),
+      },
       include: {
         brigade: true,
         workReports: true,

@@ -103,6 +103,726 @@
         <Execute>
           <option name="pattern" value="$env:DATABASE_URL=file:./dev.db" />
         </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Pattern &quot;page\.tsx|ProjectDetailHeader|ProjectDetailLabor|ProjectObjectCard|ProjectOverheads|EditForm&quot; -Context 0,2" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Pattern &quot;page\.tsx&quot; -Context 0,1" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Pattern &quot;\[id\]\\page\.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-Content E:\Uralstroy\my-app\app\projects\[id]\page.tsx" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Test-Path 'E:\Uralstroy\my-app\app\projects\[id]\page.tsx.bak'" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Test-Path 'E:\Uralstroy\my-app\app\projects\[id]'" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;(Get-Content 'E:\Uralstroy\my-app\app\projects\page.tsx' | Measure-Object -Line).Lines&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Set-Location E:\Uralstroy\my-app" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force E:\Uralstroy\my-app\node_modules\.prisma -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="echo *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Start-Process -NoNewWindow -FilePath &quot;powershell.exe&quot; -ArgumentList &quot;-NoProfile&quot;, &quot;-Command&quot;, &quot;Set-Location E:\Uralstroy\my-app; npm run dev&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force E:\Uralstroy\my-app\node_modules\@prisma\client\query_engine* -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="if not *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="taskkill /PID 12592 /F" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Invoke-WebRequest -Uri http://localhost:3000 -UseBasicParsing" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="netstat" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Invoke-WebRequest -Uri &quot;http://localhost:3000/api/schedules&quot; -UseBasicParsing" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-Content .next/server/app/api/schedules/route.js 2&gt;$null" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;const {prisma} = require('./lib/prisma'); prisma.schedule.findMany().then(d =&gt; console.log('OK', d.length)).catch(e =&gt; console.error('ERR', e.message))&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="sqlite3 prisma/dev.db &quot;SELECT COUNT(*) FROM schedules;&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Write-Host &quot;Killed&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Start-Process powershell *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -First 50" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -First 80" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -Last 30" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -Last 25" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -Last 20" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -Last 15" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -Last 10" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force node_modules\.prisma -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force .next -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;const fs = require('fs'); const code = fs.readFileSync('app/projects/[id]/page.tsx', 'utf8'); const match = code.match(/const.*=.*useProjectStore.*fetchProjectDetail/); console.log(match ? match[0] : 'not found');&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="curl -s http://localhost:3000/api/unit-rates?targetType=client 2&gt;&amp;1" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="sqlite3 dev.db &quot;SELECT COUNT(*) FROM subcontractors;&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="curl http://localhost:3000/api/subcontractors" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Invoke-WebRequest -Uri http://localhost:3000/api/subcontractors -UseBasicParsing" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="curl http://localhost:3000/api/brigades" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Invoke-WebRequest -Uri http://localhost:3000/api/brigades -UseBasicParsing" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-Process node *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Start-Sleep -Seconds 5" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -First 30" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="mkdir E:/Uralstroy/my-app/app/api/tech-equipment/[id]" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="taskkill /F /IM node.exe 2&gt;nul" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Stop-Process" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="cat *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-Content app/api/salary-reports/generate/route.ts -TotalCount 5" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item prisma/test-eot.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item prisma/test-eot-create.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item prisma/debug-schedules.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-Content app/api/eot-reports/route.ts -Encoding UTF8" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item prisma/debug-dates.ts, prisma/test-new-date.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item prisma/debug-salary.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item prisma/update-payment-types.ts, prisma/check-employees.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Move-Item &quot;app\api\projects\[id]\transactions\[tid]&quot; &quot;app\api\projects\[id]\transactions\[transactionId]&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="git checkout *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item &quot;app\api\projects\[id]\transactions\[transactionId]\route.ts&quot; -Force" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item &quot;app\api\projects\[id]\transactions\[tid]\route.ts&quot; -Force" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item &quot;app\api\projects\[id]\transactions\[tid]\route.ts&quot; -Force -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force &quot;app\api\projects\[id]\transactions\[tid]&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="git status *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="git restore *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="git clean *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-ChildItem &quot;app\api\projects\[id]\transactions&quot; -Recurse" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="rmdir /s /q &quot;app\api\projects\[id]\transactions\[tid]&quot; 2&gt;&amp;1" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Test-Path &quot;app\api\projects\[id]\transactions\[tid]&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Test-Path &quot;app\api\projects\[id]\transactions\[transactionId]&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Test-Path &quot;app\api\projects\[id]\transactions\[transactionId]\route.ts&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="git ls-files *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Test-Path &quot;app\api\projects\[id]\transactions\route.ts&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="mkdir -p &quot;app\api\projects\[id]\transactions\[transactionId]&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-ChildItem &quot;app\api\projects\[id]\transactions&quot; -Recurse -Name" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item check-employees.ts,check-eot.ts,clear-eot.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="curl -s http://localhost:3000/api/salary-reports 2&gt;&amp;1" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="taskkill /PID 19688 /F" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Set-Location E:/Uralstroy/my-app" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item prisma/cleanup.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item prisma/check-reports.ts, prisma/cleanup2.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/prisma/seed.ts' -Pattern 'funds|Фонд премирования|Фонд развития|Аварийный фонд|Фонд оборудования' -CaseSensitive:$false | ForEach-Object { $_.LineNumber }&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/prisma/seed.ts' -Pattern 'eot|ЕОТ|EOTReport' -CaseSensitive:$false | ForEach-Object { $_.LineNumber }&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/prisma/seed.ts' -Pattern 'schedulesToCreate|schedules|schedule|Смены' -CaseSensitive:$false | ForEach-Object { $_.LineNumber }&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/prisma/seed.ts' -Pattern 'funds|Фонд премирования|Фонд развития|Аварийный фонд|Фонд оборудования' | ForEach-Object { $_.LineNumber }&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/prisma/seed.ts' -Pattern 'eot|ЕОТ|EOTReport' | ForEach-Object { $_.LineNumber }&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/prisma/seed.ts' -Pattern 'schedulesToCreate|Смены' | ForEach-Object { $_.LineNumber }&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/prisma/seed.ts' -Pattern 'funds|Фонд премирования|Фонд развития|Аварийный фонд|Фонд оборудования'&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/prisma/seed.ts' -Pattern 'eot|ЕОТ|EOTReport'&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/prisma/seed.ts' -Pattern 'schedulesToCreate|Смены'&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -First 40" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -First 25" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -First 15" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -First 20" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item prisma/check-bonuses.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item prisma/dev.db -Force" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="taskkill /F /IM node.exe" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="start cmd *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Get-ChildItem -Path 'E:/Uralstroy/my-app/shared/components' -Recurse -Filter '*.tsx' | ForEach-Object { $lines = (Get-Content $_.FullName | Measure-Object -Line).Lines; [PSCustomObject]@{File=$_.FullName; Lines=$lines} } | Sort-Object Lines -Descending | Format-Table -AutoSize&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="tasklist" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr node *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="sqlite3 &quot;E:/Uralstroy/my-app/prisma/dev.db&quot; &quot;SELECT COUNT(*) FROM warehouse_items;&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node test-api.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="taskkill /F /IM node.exe 2&gt;&amp;1" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;fetch('http://localhost:3000/api/material-estimates?projectId=1').then(r =&gt; r.json()).then(d =&gt; console.log(JSON.stringify(d, null, 2)))&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;fetch('http://localhost:3000/api/warehouse').then(r =&gt; r.json()).then(d =&gt; console.log(JSON.stringify(d.data[0], null, 2)))&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="timeout /t 2 /nobreak &gt;nul" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Start-Sleep -Seconds 2" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-Content E:\Uralstroy\my-app\.next\dev\logs\*.log -Tail 50 -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="curl -s http://localhost:3000/api/unit-rates?targetType=client" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Invoke-WebRequest -Uri &quot;http://localhost:3000/api/unit-rates?targetType=client&quot; -UseBasicParsing" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -ExpandProperty Content" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="New-Item -ItemType Directory -Path &quot;E:\Uralstroy\my-app\app\api\unit-rates\[id]&quot; -Force" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="New-Item -ItemType Directory -Path &quot;E:\Uralstroy\my-app\app\api\completed-works\[id]&quot; -Force" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Invoke-WebRequest -Uri &quot;http://localhost:3000/api/completed-works?projectId=3&quot; -UseBasicParsing" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Invoke-WebRequest -Uri &quot;http://localhost:3000/api/projects&quot; -UseBasicParsing" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Invoke-WebRequest -Uri &quot;http://localhost:3000/api/completed-works&quot; -UseBasicParsing" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Invoke-WebRequest -Uri &quot;http://localhost:3000/api/projects/1&quot; -UseBasicParsing" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/shared/components/**/*.tsx' -Pattern 'defaultValue=' -List | Select-Object -First 20 | Format-Table -AutoSize&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/shared/components/**/*.tsx' -Pattern 'useCallback' -List | Select-Object -First 20 | Format-Table -AutoSize&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/shared/components/**/*.tsx' -Pattern 'memo\(' -List | Select-Object -First 20 | Format-Table -AutoSize&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/shared/components/**/*.tsx' -Pattern 'key=\{' -List | Select-Object -First 20 | Format-Table -AutoSize&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/shared/components/projects/EditableTable.tsx' -Pattern 'defaultValue=' -AllMatches | ForEach-Object { $_.LineNumber }&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/app/reports/page.tsx' -Pattern 'Modal' | ForEach-Object { $_.LineNumber }&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/app/reports/page.tsx' -Pattern 'defaultValue=' | ForEach-Object { $_.LineNumber }&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/shared/components/projects/EditableTable.tsx' -Pattern 'defaultValue=' | ForEach-Object { $_.LineNumber }&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/shared/components/projects/WorkTable.tsx' -Pattern 'defaultValue=' | ForEach-Object { $_.LineNumber }&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/app/reports/page.tsx' -Pattern 'Modal'&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/shared/components/projects/EditableTable.tsx' -Pattern 'defaultValue='&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/shared/components/projects/WorkTable.tsx' -Pattern 'defaultValue='&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/shared/components/projects/OverheadTable.tsx' -Pattern 'defaultValue=|onChange=.*=&gt;'&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/shared/components/projects/PaymentTable.tsx' -Pattern 'defaultValue=|onChange=.*=&gt;'&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/shared/components/projects/OverheadTable.tsx' -Pattern 'defaultValue='&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/shared/components/projects/TransactionTable.tsx' -Pattern 'defaultValue=|onChange=.*=&gt;'&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/app/projects/[id]/page.tsx' -Pattern 'Modal|defaultValue=|onChange=.*=&gt;' | Select-Object -First 30&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Get-ChildItem 'E:/Uralstroy/my-app/app/projects/[id]/' -Name&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Get-ChildItem 'E:/Uralstroy/my-app/app/projects/' -Recurse -Name&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/shared/components/projects/ProjectDetailLabor.tsx' -Pattern 'Modal|defaultValue=|onChange=.*=&gt;'&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/shared/components/projects/ProjectDetailInfo.tsx' -Pattern 'Modal|defaultValue=|onChange=.*=&gt;'&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="del prisma\delete-completed-works.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="sqlite3 dev.db &quot;INSERT INTO completed_works (projectId, name, quantity, cost, category, createdAt, updatedAt) VALUES (1, 'Каркасы', '40000 м²', 380, NULL, datetime('now'), datetime('now')), (1, 'Липа', '80000 м²', 760, NULL, datetime('now'), datetime('now')), (1, 'Сосна', '200000 м²', 1900, NULL, datetime('now'), datetime('now')), (1, 'Утеплитель', '120000 м²', 1140, NULL, datetime('now'), datetime('now')), (1, 'Стропила', '160000 м²', 1520, NULL, datetime('now'), datetime('now')), (1, 'Обшивка вагонкой (Липа)', '10 м²', 1680, NULL, datetime('now'), datetime('now'));&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="curl -X POST http://localhost:3000/api/completed-works -H &quot;Content-Type: application/json&quot; -d &quot;{\&quot;projectId\&quot;:1,\&quot;name\&quot;:\&quot;Каркасы\&quot;,\&quot;quantity\&quot;:\&quot;40000 м²\&quot;,\&quot;cost\&quot;:380,\&quot;category\&quot;:null}&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Invoke-WebRequest -Uri &quot;http://localhost:3000/api/completed-works&quot; -Method POST -ContentType &quot;application/json&quot; -Body '{&quot;projectId&quot;:1,&quot;name&quot;:&quot;Каркасы&quot;,&quot;quantity&quot;:&quot;40000 м²&quot;,&quot;cost&quot;:380,&quot;category&quot;:null}'" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node add-works.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="del prisma\add-works.js prisma\add-test-works.ts 2&gt;$null" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item add-works.js,add-test-works.ts -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N handleWorkEdit &quot;E:\Uralstroy\my-app\app\projects\[id]\page.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N handleWorkRemoveRow &quot;E:\Uralstroy\my-app\app\projects\[id]\page.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-Content &quot;E:\Uralstroy\my-app\app\projects\[id]\page.tsx&quot; -Encoding UTF8" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-Content &quot;E:\Uralstroy\my-app\app\projects\[id]\page.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-Content &quot;E:/Uralstroy/my-app/app/projects/[id]/page.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N handleOpenWorks &quot;E:/Uralstroy/my-app/app/projects/[id]/page.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Path &quot;E:/Uralstroy/my-app/app/projects/[id]/page.tsx&quot; -Pattern &quot;originalWorks&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Path &quot;E:/Uralstroy/my-app/app/projects/[id]/page.tsx&quot; -Pattern &quot;handleWorkCancel&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Path &quot;E:/Uralstroy/my-app/app/projects/[id]/page.tsx&quot; -Pattern &quot;editableWorks&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Path &quot;E:/Uralstroy/my-app/app/projects/[id]/page.tsx&quot; -Pattern &quot;deferredEditableWorks&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object LineNumber" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Path &quot;E:/Uralstroy/my-app/app/projects/[id]/page.tsx&quot; -Pattern &quot;onEdit=\{handleWorkEdit\}&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Path &quot;E:/Uralstroy/my-app/app/projects/[id]/page.tsx&quot; -Pattern &quot;handleWorkAddRow|handleWorkRemoveRow&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N &quot;handleWorkRemoveRow&quot; &quot;E:\Uralstroy\my-app\app\projects\[id]\page.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N &quot;const editableWorks&quot; &quot;E:\Uralstroy\my-app\app\projects\[id]\page.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N &quot;handleWorkAddRow\|handleWorkEdit\|handleWorkCancel&quot; &quot;E:\Uralstroy\my-app\app\projects\[id]\page.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/app/projects/[id]/page.tsx' -Pattern 'handleWorkAddRow|handleWorkEdit|handleWorkCancel' | ForEach-Object { $_.LineNumber }&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Pattern &quot;page.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -First 10" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -First 5" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String error *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Path &quot;app/projects/[id]/page.tsx&quot; -Pattern &quot;handleWorkRemoveRow|handleWorkSave&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="mkdir publicdocscontracts *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="New-Item -ItemType Directory -Force -Path public\docs\contracts,public\docs\reports,public\docs\schedules" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="New-Item -ItemType Directory -Force -Path app\api\documents\download" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;console.log(require('crypto').randomBytes(32).toString('base64'))&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="del E:\Uralstroy\my-app\middleware.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="del E:\Uralstroy\my-app\shared\lib\auth.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="del E:\Uralstroy\my-app\shared\lib\api.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Get-ChildItem -Path 'shared\components\finance\*.tsx' -Recurse | ForEach-Object { $content = Get-Content $_.FullName -Raw -Encoding UTF8; $content = $content -replace 'bg-white(?!-)', 'bg-white dark:bg-slate-800'; $content = $content -replace 'border-gray-200', 'border-gray-200 dark:border-slate-700'; $content = $content -replace 'border-gray-100', 'border-gray-100 dark:border-slate-700'; $content = $content -replace 'text-gray-900', 'text-gray-900 dark:text-white'; $content = $content -replace 'text-gray-700', 'text-gray-700 dark:text-slate-300'; $content = $content -replace 'text-gray-600', 'text-gray-600 dark:text-slate-300'; $content = $content -replace 'text-gray-500', 'text-gray-500 dark:text-slate-400'; $content = $content -replace 'text-gray-400', 'text-gray-400 dark:text-slate-500'; $content = $content -replace 'bg-gray-50', 'bg-gray-50 dark:bg-slate-700'; $content = $content -replace 'bg-gray-100', 'bg-gray-100 dark:bg-slate-700'; $content = $content -replace 'bg-gray-200', 'bg-gray-200 dark:bg-slate-700'; $content = $content -replace 'hover:bg-gray-50', 'hover:bg-gray-50 dark:hover:bg-slate-700'; $content = $content -replace 'hover:bg-gray-100', 'hover:bg-gray-100 dark:hover:bg-slate-600'; $content = $content -replace 'hover:bg-gray-200', 'hover:bg-gray-200 dark:hover:bg-slate-600'; $content = $content -replace 'divide-gray-100', 'divide-gray-100 dark:divide-slate-700'; $content = $content -replace 'divide-gray-200', 'divide-gray-200 dark:divide-slate-700'; [System.IO.File]::WriteAllText($_.FullName, $content, [System.Text.UTF8Encoding]::new($false)) }&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -NoProfile -Command &quot;$files = Get-ChildItem -Path 'shared\components\finance\*.tsx' -Recurse | Select-Object -ExpandProperty FullName; foreach ($f in $files) { $c = [System.IO.File]::ReadAllText($f, [System.Text.UTF8Encoding]::new($false)); $c = $c -replace 'bg-white(?![a-z])', 'bg-white dark:bg-slate-800'; $c = $c -replace 'border-gray-200', 'border-gray-200 dark:border-slate-700'; $c = $c -replace 'border-gray-100', 'border-gray-100 dark:border-slate-700'; $c = $c -replace 'text-gray-900', 'text-gray-900 dark:text-white'; $c = $c -replace 'text-gray-700', 'text-gray-700 dark:text-slate-300'; $c = $c -replace 'text-gray-600', 'text-gray-600 dark:text-slate-300'; $c = $c -replace 'text-gray-500', 'text-gray-500 dark:text-slate-400'; $c = $c -replace 'text-gray-400', 'text-gray-400 dark:text-slate-500'; $c = $c -replace 'bg-gray-50(?![a-z])', 'bg-gray-50 dark:bg-slate-700'; $c = $c -replace 'bg-gray-100', 'bg-gray-100 dark:bg-slate-700'; $c = $c -replace 'bg-gray-200', 'bg-gray-200 dark:bg-slate-700'; $c = $c -replace 'hover:bg-gray-50(?![a-z])', 'hover:bg-gray-50 dark:hover:bg-slate-700'; $c = $c -replace 'hover:bg-gray-100(?![a-z])', 'hover:bg-gray-100 dark:hover:bg-slate-600'; $c = $c -replace 'hover:bg-gray-200(?![a-z])', 'hover:bg-gray-200 dark:hover:bg-slate-600'; $c = $c -replace 'divide-gray-100', 'divide-gray-100 dark:divide-slate-700'; $c = $c -replace 'divide-gray-200', 'divide-gray-200 dark:divide-slate-700'; [System.IO.File]::WriteAllText($f, $c, [System.Text.UTF8Encoding]::new($false)) }; Write-Host 'Done: finance files'&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -NoProfile -Command &quot;$p = 'E:/Uralstroy/my-app'; $files = Get-ChildItem -Path (Join-Path $p 'shared/components/finance/*.tsx') -Recurse | Select-Object -ExpandProperty FullName; foreach ($f in $files) { $c = [System.IO.File]::ReadAllText($f, [System.Text.UTF8Encoding]::new($false)); $c = $c -replace 'bg-white(?![a-z])', 'bg-white dark:bg-slate-800'; $c = $c -replace 'border-gray-200', 'border-gray-200 dark:border-slate-700'; $c = $c -replace 'border-gray-100', 'border-gray-100 dark:border-slate-700'; $c = $c -replace 'text-gray-900', 'text-gray-900 dark:text-white'; $c = $c -replace 'text-gray-700', 'text-gray-700 dark:text-slate-300'; $c = $c -replace 'text-gray-600', 'text-gray-600 dark:text-slate-300'; $c = $c -replace 'text-gray-500', 'text-gray-500 dark:text-slate-400'; $c = $c -replace 'text-gray-400', 'text-gray-400 dark:text-slate-500'; $c = $c -replace 'bg-gray-50(?![a-z])', 'bg-gray-50 dark:bg-slate-700'; $c = $c -replace 'bg-gray-100', 'bg-gray-100 dark:bg-slate-700'; $c = $c -replace 'bg-gray-200', 'bg-gray-200 dark:bg-slate-700'; $c = $c -replace 'hover:bg-gray-50(?![a-z])', 'hover:bg-gray-50 dark:hover:bg-slate-700'; $c = $c -replace 'hover:bg-gray-100(?![a-z])', 'hover:bg-gray-100 dark:hover:bg-slate-600'; $c = $c -replace 'hover:bg-gray-200(?![a-z])', 'hover:bg-gray-200 dark:hover:bg-slate-600'; $c = $c -replace 'divide-gray-100', 'divide-gray-100 dark:divide-slate-700'; $c = $c -replace 'divide-gray-200', 'divide-gray-200 dark:divide-slate-700'; [System.IO.File]::WriteAllText($f, $c, [System.Text.UTF8Encoding]::new($false)) }; Write-Host 'Done: finance files'&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;E:/Uralstroy/my-app/fix-dark.ps1&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -NoProfile -ExecutionPolicy Bypass -Command &quot;$p = 'E:/Uralstroy/my-app'; $files = Get-ChildItem -Path (Join-Path $p 'shared/components/**/*.tsx') -Recurse | Select-Object -ExpandProperty FullName; foreach ($f in $files) { $c = [System.IO.File]::ReadAllText($f, [System.Text.UTF8Encoding]::new($false)); $original = $c; $c = $c -replace 'bg-gray-300', 'bg-gray-300 dark:bg-slate-600'; $c = $c -replace 'border-gray-300', 'border-gray-300 dark:border-slate-600'; $c = $c -replace 'hover:bg-gray-300', 'hover:bg-gray-300 dark:hover:bg-slate-600'; $c = $c -replace 'hover:bg-gray-400', 'hover:bg-gray-400 dark:hover:bg-slate-500'; $c = $c -replace 'bg-gray-400', 'bg-gray-400 dark:bg-slate-600'; $c = $c -replace 'text-gray-800', 'text-gray-800 dark:text-slate-200'; $c = $c -replace 'text-gray-300', 'text-gray-300 dark:text-slate-500'; $c = $c -replace 'text-gray-200', 'text-gray-200 dark:text-slate-600'; if ($c -ne $original) { [System.IO.File]::WriteAllText($f, $c, [System.Text.UTF8Encoding]::new($false)) } }; Write-Host 'Done: secondary gray patterns'&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;E:/Uralstroy/my-app/fix-dark2.ps1&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;E:/Uralstroy/my-app/fix-dark3.ps1&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;E:/Uralstroy/my-app/fix-dark4.ps1&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -NoProfile -Command &quot;Remove-Item 'E:/Uralstroy/my-app/fix-dark*.ps1' -Force&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-ChildItem -Recurse -Include *.tsx" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;const fs=require('fs'),path=require('path'),glob=require('glob');glob('**/*.tsx',{cwd:'E:/Uralstroy/my-app',ignore:['node_modules/**','.next/**']},(e,files)=&gt;{files.forEach(f=&gt;{const p=path.join('E:/Uralstroy/my-app',f),c=fs.readFileSync(p,'utf8');if(c.match(/bg-gray-50(?!.*dark:bg)/)&amp;&amp;!c.match(/dark:bg-slate-700/))console.log(f)}))&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node E:/Uralstroy/my-app/fix-dark.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="del E:\Uralstroy\my-app\fix-dark.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="rmdir /s /q .next" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force .next" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-Content E:\Uralstroy\my-app\shared\components\projects\PaymentTable.tsx" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -First 100" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="start npx *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N /C:&quot;alert(&quot; /C:&quot;confirm(&quot; &quot;E:\Uralstroy\my-app\app\finance\page.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N /C:&quot;alert(&quot; /C:&quot;confirm(&quot; &quot;E:\Uralstroy\my-app\app\projects\[id]\page.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N /C:&quot;alert(&quot; /C:&quot;confirm(&quot; &quot;E:\Uralstroy\my-app\app\projects\page.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N /C:&quot;alert(&quot; /C:&quot;confirm(&quot; &quot;E:\Uralstroy\my-app\app\reports\page.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N /C:&quot;alert(&quot; /C:&quot;confirm(&quot; &quot;E:\Uralstroy\my-app\app\subcontractors\page.tsx&quot; &quot;E:\Uralstroy\my-app\app\tech-equipment\page.tsx&quot; &quot;E:\Uralstroy\my-app\app\work-types\page.tsx&quot; &quot;E:\Uralstroy\my-app\app\materials\page.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N /C:&quot;alert(&quot; &quot;E:\Uralstroy\my-app\app\work-types\page.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /S /N /C:&quot;alert(&quot; /C:&quot;confirm(&quot; &quot;E:\Uralstroy\my-app\shared\components\**\*.tsx&quot; 2&gt;nul" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="npm uninstall *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Get-Process -Name node -ErrorAction SilentlyContinue | Stop-Process -Force&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Remove-Item -Path 'E:\Uralstroy\my-app\.next' -Recurse -Force -ErrorAction SilentlyContinue&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="ConvertFrom-Json" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;const {PrismaClient} = require('@prisma/client'); const p = new PrismaClient(); p.project.findMany({select:{name:true,status:true}}).then(d=&gt;{console.log(JSON.stringify(d,null,2));p.$disconnect()})&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;const{PrismaClient}=require('@prisma/client');const p=new PrismaClient();p.project.findMany({select:{name:true,status:true}}).then(d=&gt;{console.log(JSON.stringify(d));p.$disconnect()})&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node E:/Uralstroy/my-app/check-status.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node E:/Uralstroy/my-app/check-reports.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node E:/Uralstroy/my-app/check-employees.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="del E:/Uralstroy/my-app/check-status.js E:/Uralstroy/my-app/check-reports.js E:/Uralstroy/my-app/check-employees.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item E:/Uralstroy/my-app/check-*.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item prisma\seed.ts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node fix-date.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node check-dates.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-Content .env.local -Head 10" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node check-user.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node create-admin.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Force check-user.js, create-admin.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Start-Sleep -Seconds 3" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="mkdir -p app/api/supplier-settlements" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Pattern &quot;supplier|warehouse|expense|movement&quot; -CaseSensitive:$false" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Pattern &quot;supplier-settlements|warehouse/page|AddExpenseModal|supplier-settlements/route|expenses/route|warehouse/movements/route&quot; -CaseSensitive:$false" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="sqlite3 prisma/backups/backup_2026-09-01T10-08-34.db &quot;.tables&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;const Database = require('better-sqlite3'); const db = Database('prisma/backups/backup_2026-09-01T10-08-34.db'); console.log(db.prepare('SELECT name FROM sqlite_master WHERE type=\&quot;table\&quot;').all());&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="npm ls" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-ChildItem node_modules -Filter &quot;*sqlite*&quot; -Recurse -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Copy-Item prisma/backups/backup_2026-09-01T10-08-34.db prisma/dev.db -Force" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node verify-data.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="taskkill /PID 13624 /F" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="curl -s http://localhost:3000/api/suppliers" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Invoke-WebRequest -Uri http://localhost:3000/api/suppliers -UseBasicParsing" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Path .next -Recurse -Force -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-Content E:/Uralstroy/my-app/app/api/supplier-materials/route.ts -First 5" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Select-String -Path 'E:/Uralstroy/my-app/prisma/schema.prisma' -Pattern 'CompletedWork|UnitRate'&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;npx prisma db query completed_work --table&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;npx prisma db execute --stdin&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="sqlite3 &quot;E:/Uralstroy/my-app/prisma/dev.db&quot; &quot;SELECT COUNT(*) as count, projectId FROM completed_works GROUP BY projectId;&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;node -e \&quot;const { PrismaClient } = require('@prisma/client'); const p = new PrismaClient(); p.$connect().then(async () =&gt; { const works = await p.completedWork.groupBy({ by: ['projectId'], _count: { projectId: true } }); console.log(JSON.stringify(works, null, 2)); await p.$disconnect(); });\&quot;&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node E:/Uralstroy/my-app/check-works.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node E:/Uralstroy/my-app/clear-default-works.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="del E:/Uralstroy/my-app/check-works.js E:/Uralstroy/my-app/clear-default-works.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="del E:/Uralstroy/my-app/check-works.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="del E:/Uralstroy/my-app/clear-default-works.js" />
+        </Execute>
       </list>
     </option>
     <option name="autoApprovedReads">
@@ -112,6 +832,5 @@
         </Read>
       </list>
     </option>
-    <option name="lastAutoApproveScope" value="SESSION" />
   </component>
 </project>

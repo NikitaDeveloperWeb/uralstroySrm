@@ -59,7 +59,7 @@ export function NotificationDropdown() {
       case 'out-of-stock':
         return <Archive className="w-5 h-5 text-orange-600 flex-shrink-0" />;
       default:
-        return <Bell className="w-5 h-5 text-gray-600 flex-shrink-0" />;
+        return <Bell className="w-5 h-5 text-gray-600 dark:text-slate-300 flex-shrink-0" />;
     }
   };
 
@@ -77,7 +77,7 @@ export function NotificationDropdown() {
         );
       case 'read':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-200">
             Прочитан
           </span>
         );
@@ -113,10 +113,10 @@ export function NotificationDropdown() {
     <div className="relative">
       {/* Filters Panel */}
       {showFilters && (
-        <div className="absolute right-0 top-16 w-72 bg-white rounded-lg shadow-xl border border-gray-200 z-[9999] p-4">
+        <div className="absolute right-0 top-16 w-72 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-gray-200 dark:border-slate-700 z-[9999] p-4">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Статус</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Статус</label>
               <div className="space-y-1">
                 {[
                   { value: 'all', label: 'Все' },
@@ -130,7 +130,7 @@ export function NotificationDropdown() {
                     className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
                       filters.status === option.value
                         ? 'bg-blue-50 text-blue-700 font-medium'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        : 'text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700'
                     }`}
                   >
                     {option.label}
@@ -140,7 +140,7 @@ export function NotificationDropdown() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Категория</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Категория</label>
               <div className="space-y-1">
                 {[
                   { value: 'all', label: 'Все' },
@@ -157,7 +157,7 @@ export function NotificationDropdown() {
                     className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
                       filters.category === option.value
                         ? 'bg-blue-50 text-blue-700 font-medium'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        : 'text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700'
                     }`}
                   >
                     {option.label}
@@ -167,7 +167,7 @@ export function NotificationDropdown() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Приоритет</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Приоритет</label>
               <div className="space-y-1">
                 {[
                   { value: 'all', label: 'Все' },
@@ -181,7 +181,7 @@ export function NotificationDropdown() {
                     className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
                       filters.priority === option.value
                         ? 'bg-blue-50 text-blue-700 font-medium'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        : 'text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700'
                     }`}
                   >
                     {option.label}
@@ -203,9 +203,9 @@ export function NotificationDropdown() {
       )}
 
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 bg-white">
+      <div className="p-4 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="font-semibold text-gray-900">Уведомления</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-white">Уведомления</h3>
           {unreadCount > 0 && (
             <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
               {unreadCount}
@@ -246,8 +246,8 @@ export function NotificationDropdown() {
       {/* Notifications List */}
       {filteredNotifications.length === 0 ? (
         <div className="p-6 text-center">
-          <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 text-sm">Нет уведомлений</p>
+          <Bell className="w-12 h-12 text-gray-300 dark:text-slate-500 mx-auto mb-3" />
+          <p className="text-gray-500 dark:text-slate-400 text-sm">Нет уведомлений</p>
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
@@ -258,12 +258,12 @@ export function NotificationDropdown() {
           )}
         </div>
       ) : (
-        <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
+        <div className="divide-y divide-gray-100 dark:divide-slate-700 max-h-96 overflow-y-auto">
           {filteredNotifications.map((notification) => (
             <div
               key={notification.id}
               onClick={() => handleNotificationClick(notification)}
-              className={`block border-l-4 ${getPriorityColor(notification.priority)} hover:bg-gray-50 transition-colors ${
+              className={`block border-l-4 ${getPriorityColor(notification.priority)} hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700 transition-colors ${
                 notification.status === 'unread' ? 'bg-blue-50' : ''
               } ${notification.status === 'archived' ? 'grayscale' : ''}`}
             >
@@ -275,14 +275,14 @@ export function NotificationDropdown() {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
                           {getStatusBadge(notification.status)}
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-500 dark:text-slate-400">
                             {priorityLabels[notification.priority]}
                           </span>
                         </div>
-                        <p className={`text-sm ${notification.status === 'unread' ? 'text-gray-900 font-medium' : 'text-gray-700'}`}>
+                        <p className={`text-sm ${notification.status === 'unread' ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-700 dark:text-slate-300'}`}>
                           {notification.message}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                           {new Date(notification.date).toLocaleDateString('ru-RU')}
                         </p>
                       </div>
@@ -309,7 +309,7 @@ export function NotificationDropdown() {
                                 markAsRead(notification.id);
                               }
                             }}
-                            className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                            className="text-xs text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:text-slate-300 flex items-center gap-1"
                           >
                             {notification.status === 'unread' ? (
                               <>
@@ -328,7 +328,7 @@ export function NotificationDropdown() {
                               e.stopPropagation();
                               archive(notification.id);
                             }}
-                            className="text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
+                            className="text-xs text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:text-slate-300 flex items-center gap-1"
                           >
                             <Archive className="w-3 h-3" />
                             В архив

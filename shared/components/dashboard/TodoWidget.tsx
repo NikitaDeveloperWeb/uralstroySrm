@@ -74,15 +74,15 @@ export function TodoWidget() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">Задачи на неделю</h2>
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Задачи на неделю</h2>
       <div className="flex gap-2 mb-4">
         <input
           type="text"
           value={newTodo}
           onChange={(e) => setNewTodo(e.target.value)}
           placeholder="Новая задача..."
-          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
+          className="flex-1 px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
         />
         <Button onClick={addTodo} className="bg-[#1976d2] hover:bg-[#1565c0] h-10">
           <span className="mr-2">+</span>
@@ -94,7 +94,7 @@ export function TodoWidget() {
           <div 
             key={todo.id} 
             className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${
-              todo.completed ? 'bg-gray-50' : 'bg-blue-50'
+              todo.completed ? 'bg-gray-50 dark:bg-slate-700' : 'bg-blue-50'
             }`}
           >
             <button
@@ -102,7 +102,7 @@ export function TodoWidget() {
               className={`mt-1 w-5 h-5 rounded border flex items-center justify-center transition-colors ${
                 todo.completed
                   ? 'bg-green-500 border-green-500 text-white'
-                  : 'border-gray-300 hover:border-blue-500'
+                  : 'border-gray-300 dark:border-slate-600 hover:border-blue-500'
               }`}
             >
               {todo.completed && (
@@ -118,7 +118,7 @@ export function TodoWidget() {
                     type="text"
                     value={editingText}
                     onChange={(e) => setEditingText(e.target.value)}
-                    className="flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
+                    className="flex-1 px-2 py-1 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') saveEditing(todo.id);
@@ -134,10 +134,10 @@ export function TodoWidget() {
                 </div>
               ) : (
                 <>
-                  <p className={`text-sm font-medium ${todo.completed ? 'text-gray-500 line-through' : 'text-gray-900'}`}>
+                  <p className={`text-sm font-medium ${todo.completed ? 'text-gray-500 dark:text-slate-400 line-through' : 'text-gray-900 dark:text-white'}`}>
                     {todo.text}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                     {getDayName(todo.day)}, {todo.day} число
                   </p>
                 </>
@@ -148,7 +148,7 @@ export function TodoWidget() {
                 <>
                   <button
                     onClick={() => startEditing(todo)}
-                    className="p-1.5 text-gray-500 hover:bg-white rounded transition-colors"
+                    className="p-1.5 text-gray-500 dark:text-slate-400 hover:bg-white dark:bg-slate-800 rounded transition-colors"
                     title="Редактировать"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -157,7 +157,7 @@ export function TodoWidget() {
                   </button>
                   <button
                     onClick={() => deleteTodo(todo.id)}
-                    className="p-1.5 text-gray-500 hover:bg-white rounded transition-colors"
+                    className="p-1.5 text-gray-500 dark:text-slate-400 hover:bg-white dark:bg-slate-800 rounded transition-colors"
                     title="Удалить"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

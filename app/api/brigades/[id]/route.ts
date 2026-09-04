@@ -41,7 +41,12 @@ export async function PATCH(
 
     const brigade = await prisma.brigade.update({
       where: { id: Number(id) },
-      data: validated,
+      data: {
+        ...(validated.name !== undefined && { name: validated.name }),
+        ...(validated.leaderId !== undefined && { leaderId: validated.leaderId }),
+        ...(validated.memberIds !== undefined && { memberIds: validated.memberIds }),
+        ...(validated.skillIds && validated.skillIds.length > 0 && { skills: { connect: validated.skillIds.map((id: number) => ({ id })) } }),
+      },
       include: {
         employees: true,
         projects: true,

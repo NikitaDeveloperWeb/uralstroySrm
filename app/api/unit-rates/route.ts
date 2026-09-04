@@ -8,6 +8,7 @@ const createUnitRateSchema = z.object({
   category: z.string().min(1, 'Категория обязательна'),
   unit: z.string().min(1, 'Единица измерения обязательна').default('м²'),
   pricePerUnit: z.coerce.number().positive('Цена должна быть больше 0'),
+  targetType: z.enum(['client', 'employee']).default('client'),
   description: z.string().optional().nullable(),
   isActive: z.boolean().optional().default(true),
 });
@@ -19,10 +20,12 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get('category');
+    const targetType = searchParams.get('targetType');
     const isActive = searchParams.get('isActive');
 
     const where: any = {};
     if (category) where.category = category;
+    if (targetType) where.targetType = targetType;
     if (isActive !== null) where.isActive = isActive === 'true';
 
     const rates = await prisma.unitRate.findMany({

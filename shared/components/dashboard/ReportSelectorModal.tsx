@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X, FileText, Building2, Wallet, Users, ShoppingCart, Clock, HardHat, Truck, Wrench } from 'lucide-react';
+import { useAlert } from '@/shared/hooks/useAlert';
 
 interface ReportOption {
   id: string;
@@ -117,7 +118,7 @@ export function ReportSelectorModal({ isOpen, onClose }: ReportSelectorModalProp
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="relative w-full max-w-5xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="p-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
           <div className="flex items-center justify-between">
@@ -127,7 +128,7 @@ export function ReportSelectorModal({ isOpen, onClose }: ReportSelectorModalProp
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              className="p-2 hover:bg-white dark:bg-slate-800/20 rounded-lg transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
@@ -135,7 +136,7 @@ export function ReportSelectorModal({ isOpen, onClose }: ReportSelectorModalProp
         </div>
 
         {/* Category Filters */}
-        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+        <div className="px-6 py-4 bg-gray-50 dark:bg-slate-700 border-b border-gray-200 dark:border-slate-700">
           <div className="flex gap-2 flex-wrap">
             {categories.map(category => (
               <button
@@ -144,7 +145,7 @@ export function ReportSelectorModal({ isOpen, onClose }: ReportSelectorModalProp
                 className={`px-4 py-2 rounded-lg font-medium transition-all ${
                   selectedCategory === category
                     ? 'bg-[#1976d2] text-white shadow-md'
-                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                    : 'bg-white dark:bg-slate-800 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-600 dark:bg-slate-700 border border-gray-200 dark:border-slate-700'
                 }`}
               >
                 {category}
@@ -157,7 +158,7 @@ export function ReportSelectorModal({ isOpen, onClose }: ReportSelectorModalProp
         <div className="flex-1 overflow-y-auto p-6">
           {Object.entries(groupedByCategory).map(([category, reports]) => (
             <div key={category} className="mb-8 last:mb-0">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-[#1976d2]" />
                 {category}
               </h3>
@@ -165,16 +166,19 @@ export function ReportSelectorModal({ isOpen, onClose }: ReportSelectorModalProp
                 {reports.map(report => (
                   <button
                     key={report.id}
-                    onClick={() => alert(`Открываю форму: ${report.title}\n\nЗдесь будет открываться форма для создания отчета`)}
-                    className="group text-left p-5 bg-white border-2 border-gray-200 rounded-xl hover:border-[#1976d2] hover:shadow-lg transition-all duration-200"
+                    onClick={() => {
+                      const { alert } = useAlert();
+                      alert(`Открываю форму: ${report.title}\n\nЗдесь будет открываться форма для создания отчета`);
+                    }}
+                    className="group text-left p-5 bg-white dark:bg-slate-800 border-2 border-gray-200 dark:border-slate-700 rounded-xl hover:border-[#1976d2] hover:shadow-lg transition-all duration-200"
                   >
                     <div className={`w-14 h-14 bg-gradient-to-br ${report.color} rounded-lg flex items-center justify-center text-white mb-4 group-hover:scale-110 transition-transform`}>
                       {report.icon}
                     </div>
-                    <h4 className="text-base font-semibold text-gray-900 mb-2 group-hover:text-[#1976d2] transition-colors">
+                    <h4 className="text-base font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-[#1976d2] transition-colors">
                       {report.title}
                     </h4>
-                    <p className="text-sm text-gray-500 leading-relaxed">
+                    <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">
                       {report.description}
                     </p>
                   </button>
@@ -185,10 +189,10 @@ export function ReportSelectorModal({ isOpen, onClose }: ReportSelectorModalProp
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+        <div className="p-4 bg-gray-50 dark:bg-slate-700 border-t border-gray-200 dark:border-slate-700 flex justify-end">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+            className="px-6 py-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700 transition-colors"
           >
             Закрыть
           </button>

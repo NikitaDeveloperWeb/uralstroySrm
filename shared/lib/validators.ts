@@ -25,12 +25,13 @@ export const createProjectSchema = z.object({
   complexity: z.enum(['легкий', 'средний', 'сложный'], {
     message: 'Некорректная сложность',
   }),
-  status: z.enum(['создан', 'в работе', 'завершен']).default('создан'),
+  status: z.enum(['создан', 'в работе', 'на паузе', 'завершен']).default('создан'),
   code: z.string().min(1, 'Код обязателен'),
   prepayment: z.preprocess(emptyToNull, z.number().min(0).nullable().optional()),
   prepaymentDate: z.preprocess(stringToDate, z.date().optional().nullable()),
   unitRateId: z.preprocess(emptyToNull, z.number().int().positive().nullable().optional()),
   brigadeId: z.preprocess(emptyToNull, z.number().int().positive().nullable().optional()),
+  clientId: z.preprocess(emptyToNull, z.number().int().positive().nullable().optional()),
   // Поля для карты объекта
   floors: z.preprocess(emptyToNull, z.number().int().positive().nullable().optional()),
   hasMansard: z.preprocess(emptyToNull, z.boolean().nullable().optional()),
@@ -65,9 +66,7 @@ export const createBrigadeSchema = z.object({
   memberIds: z.union([z.array(z.coerce.number().int().positive()), z.string()]).transform((val) =>
     Array.isArray(val) ? JSON.stringify(val) : val
   ).default('[]'),
-  skills: z.union([z.array(z.string()), z.string()]).transform((val) =>
-    Array.isArray(val) ? JSON.stringify(val) : val
-  ).default('[]'),
+  skillIds: z.array(z.coerce.number().int().positive()).default([]),
 });
 
 export const updateBrigadeSchema = z.object({
@@ -76,9 +75,7 @@ export const updateBrigadeSchema = z.object({
   memberIds: z.union([z.array(z.coerce.number().int().positive()), z.string()]).transform((val) =>
     Array.isArray(val) ? JSON.stringify(val) : val
   ).optional(),
-  skills: z.union([z.array(z.string()), z.string()]).transform((val) =>
-    Array.isArray(val) ? JSON.stringify(val) : val
-  ).optional(),
+  skillIds: z.array(z.coerce.number().int().positive()).optional(),
 });
 
 // ============================================================
@@ -94,10 +91,9 @@ export const createEmployeeSchema = z.object({
   workplace: z.string().min(1, 'Рабочее место обязательно'),
   paymentType: z.string().min(1, 'Тип оплаты обязателен'),
   employmentType: z.string().min(1, 'Тип занятости обязателен'),
-  skills: z.union([z.array(z.string()), z.string()]).transform((val) =>
-    Array.isArray(val) ? JSON.stringify(val) : val
-  ).default('[]'),
+  skillIds: z.array(z.coerce.number().int().positive()).default([]),
   brigadeId: z.coerce.number().int().positive().optional().nullable(),
+  hourlyRateId: z.coerce.number().int().positive().optional().nullable(),
 });
 
 export const updateEmployeeSchema = z.object({
@@ -109,10 +105,9 @@ export const updateEmployeeSchema = z.object({
   workplace: z.string().min(1, 'Рабочее место обязательно').optional(),
   paymentType: z.string().min(1, 'Тип оплаты обязателен').optional(),
   employmentType: z.string().min(1, 'Тип занятости обязателен').optional(),
-  skills: z.union([z.array(z.string()), z.string()]).transform((val) =>
-    Array.isArray(val) ? JSON.stringify(val) : val
-  ).optional(),
+  skillIds: z.array(z.coerce.number().int().positive()).optional(),
   brigadeId: z.coerce.number().int().positive().optional().nullable(),
+  hourlyRateId: z.coerce.number().int().positive().optional().nullable(),
 });
 
 // ============================================================
@@ -124,10 +119,12 @@ export const createWarehouseItemSchema = z.object({
   category: z.string().min(1, 'Категория обязательна'),
   quantity: z.coerce.number().int().nonnegative(),
   unit: z.string().min(1, 'Единица измерения обязательна'),
-  location: z.string().min(1, 'Расположение обязательно'),
-  status: z
-    .enum(['достаточно', 'мало', 'критически мало', 'нет в наличии'])
-    .default('достаточно'),
+  price: z.coerce.number().int().nonnegative().optional().nullable(),
+  lotNumber: z.string().optional().nullable(),
+  cost: z.coerce.number().int().nonnegative().optional().nullable(),
+  location: z.string().optional().nullable(),
+  status: z.enum(['in-stock', 'ordered']).default('in-stock'),
+  supplierId: z.coerce.number().int().positive().optional().nullable(),
 });
 
 export const updateWarehouseItemSchema = createWarehouseItemSchema.partial();
@@ -142,8 +139,10 @@ export const createWarehouseMovementSchema = z.object({
     message: 'Тип должен быть income или expense',
   }),
   quantity: z.coerce.number().int().positive(),
+  amount: z.coerce.number().int().nonnegative().optional().nullable(),
   date: z.coerce.date(),
   comment: z.string().optional().nullable(),
+  supplierId: z.coerce.number().int().positive().optional().nullable(),
 });
 
 // ============================================================
@@ -153,12 +152,17 @@ export const createWarehouseMovementSchema = z.object({
 export const createMaterialEstimateSchema = z.object({
   projectId: z.coerce.number().int().positive(),
   name: z.string().min(1, 'Название материала обязательно'),
-  quantity: z.string().min(1, 'Количество обязательно'),
+  quantity: z.coerce.string().min(1, 'Количество обязательно'),
   cost: z.coerce.number().int().nonnegative(),
   category: z.string().optional().nullable(),
 });
 
-export const updateMaterialEstimateSchema = createMaterialEstimateSchema.partial();
+export const updateMaterialEstimateSchema = z.object({
+  name: z.string().optional(),
+  quantity: z.string().optional(),
+  cost: z.coerce.number().int().nonnegative().optional(),
+  category: z.string().optional().nullable(),
+});
 
 // ============================================================
 // CompletedWork Schemas
@@ -355,6 +359,7 @@ export const updateNotificationSchema = z.object({
 
 export const createUserSchema = z.object({
   email: z.string().email('Некорректный email'),
+  password: z.string().min(6, 'Пароль минимум 6 символов'),
   name: z.string().optional().nullable(),
   role: z.enum(['admin', 'manager', 'worker']).default('admin'),
 });
@@ -380,9 +385,9 @@ export const updateClientSchema = createClientSchema.partial();
 // ============================================================
 
 export const createProjectTransactionSchema = z.object({
-  projectId: z.coerce.number().int().positive(),
+  projectId: z.coerce.number().int().positive().optional(),
   amount: z.coerce.number().positive('Сумма должна быть больше 0'),
-  date: z.coerce.date(),
+  date: z.string().min(1, 'Дата обязательна'),
   comment: z.string().optional().nullable(),
 });
 
@@ -391,3 +396,167 @@ export const updateProjectTransactionSchema = z.object({
   date: z.coerce.date().optional(),
   comment: z.string().optional().nullable(),
 });
+
+// ============================================================
+// AdvanceReport Schemas
+// ============================================================
+
+export const createAdvanceReportItemSchema = z.object({
+  employeeId: z.coerce.number().int().positive(),
+  employeeName: z.string().min(1, 'ФИО обязательно'),
+  amount: z.coerce.number().int().positive('Сумма должна быть больше 0'),
+  purpose: z.string().min(1, 'Цель обязательна'),
+});
+
+export const createAdvanceReportSchema = z.object({
+  date: z.coerce.date(),
+  entries: z.array(createAdvanceReportItemSchema).min(1, 'Должен быть хотя бы один сотрудник'),
+}).refine((data) => {
+  const total = data.entries.reduce((sum, e) => sum + e.amount, 0);
+  return total > 0;
+}, { message: 'Общая сумма должна быть больше 0' });
+
+export const updateAdvanceReportItemSchema = createAdvanceReportItemSchema.partial();
+
+export const updateAdvanceReportSchema = z.object({
+  date: z.coerce.date().optional(),
+  entries: z.array(createAdvanceReportItemSchema).optional(),
+  status: z.enum(['pending', 'approved', 'rejected']).optional(),
+});
+
+// ============================================================
+// SalaryReport Schemas
+// ============================================================
+
+export const createSalaryReportItemSchema = z.object({
+  employeeId: z.coerce.number().int().positive(),
+  employeeName: z.string().min(1, 'ФИО обязательно'),
+  amount: z.coerce.number().int().positive('Сумма должна быть больше 0'),
+  period: z.string().min(1, 'Период обязателен'),
+});
+
+export const createSalaryReportSchema = z.object({
+  date: z.coerce.date(),
+  period: z.string().min(1, 'Период обязателен'),
+  entries: z.array(createSalaryReportItemSchema).min(1, 'Должен быть хотя бы один сотрудник'),
+}).refine((data) => {
+  const total = data.entries.reduce((sum, e) => sum + e.amount, 0);
+  return total > 0;
+}, { message: 'Общая сумма должна быть больше 0' });
+
+export const updateSalaryReportItemSchema = createSalaryReportItemSchema.partial();
+
+export const updateSalaryReportSchema = z.object({
+  date: z.coerce.date().optional(),
+  period: z.string().min(1, 'Период обязателен').optional(),
+  entries: z.array(createSalaryReportItemSchema).optional(),
+  status: z.enum(['pending', 'paid']).optional(),
+});
+
+// ============================================================
+// EOT Report Schemas
+// ============================================================
+
+export const createEOTReportSchema = z.object({
+  date: z.coerce.date(),
+});
+
+export const createEOTReportItemSchema = z.object({
+  employeeId: z.coerce.number().int().positive(),
+  employeeName: z.string().min(1, 'ФИО обязательно'),
+  paymentType: z.string().min(1, 'Тип оплаты обязателен'),
+  hours: z.coerce.number().positive().optional(),
+  rate: z.coerce.number().positive().optional(),
+  quantity: z.coerce.number().positive().optional(),
+  workAmount: z.coerce.number().positive().optional(),
+  salary: z.coerce.number().positive('Сумма должна быть больше 0'),
+  comment: z.string().optional().nullable(),
+});
+
+// ============================================================
+// Shop Report Schemas
+// ============================================================
+
+export const createShopReportItemSchema = z.object({
+  workTypeId: z.coerce.number().int().positive().optional().nullable(),
+  workName: z.string().min(1, 'Название работы обязательно'),
+  quantity: z.coerce.number().positive('Количество должно быть больше 0'),
+  rate: z.coerce.number().positive('Ставка должна быть больше 0'),
+  amount: z.coerce.number().positive('Сумма должна быть больше 0'),
+}).refine((data) => {
+  const calculated = Math.round(data.quantity * data.rate * 100) / 100;
+  const roundedAmount = Math.round(data.amount * 100) / 100;
+  return Math.abs(calculated - roundedAmount) < 0.01;
+}, {
+  message: 'Сумма должна быть равна Количество × Ставка',
+  path: ['amount'],
+});
+
+export const createShopReportSchema = z.object({
+  employeeId: z.coerce.number().int().positive(),
+  projectId: z.coerce.number().int().positive().optional().nullable(),
+  date: z.coerce.date(),
+  periodFrom: z.coerce.date(),
+  periodTo: z.coerce.date(),
+  comment: z.string().optional().nullable(),
+  items: z.array(createShopReportItemSchema).min(1, 'Должна быть хотя бы одна работа'),
+}).refine((data) => data.periodTo >= data.periodFrom, {
+  message: 'Конечная дата не может быть раньше начальной',
+  path: ['periodTo'],
+});
+
+export const updateShopReportSchema = z.object({
+  employeeId: z.coerce.number().int().positive().optional(),
+  projectId: z.coerce.number().int().positive().optional().nullable(),
+  date: z.coerce.date().optional(),
+  periodFrom: z.coerce.date().optional(),
+  periodTo: z.coerce.date().optional(),
+  comment: z.string().optional().nullable(),
+});
+
+// ============================================================
+// Subcontractor Schemas
+// ============================================================
+
+export const createSubcontractorSchema = z.object({
+  companyName: z.string().min(1, 'Название компании обязательно'),
+  contactPerson: z.string().min(1, 'Контактное лицо обязательно'),
+  phone: z.string().min(1, 'Телефон обязателен'),
+  email: z.string().regex(emailRegex, 'Некорректный email').or(z.literal('')).nullable().optional(),
+  address: z.string().min(1, 'Адрес обязателен'),
+  specialization: z.string().min(1, 'Специализация обязательна'),
+  status: z.enum(['active', 'inactive']).default('active'),
+});
+
+export const updateSubcontractorSchema = createSubcontractorSchema.partial();
+
+// ============================================================
+// Supplier Schemas
+// ============================================================
+
+export const createSupplierSchema = z.object({
+  companyName: z.string().min(1, 'Название компании обязательно'),
+  contactPerson: z.string().min(1, 'Контактное лицо обязательно'),
+  phone: z.string().min(1, 'Телефон обязателен'),
+  email: z.string().regex(emailRegex, 'Некорректный email').or(z.literal('')).nullable().optional(),
+  address: z.string().min(1, 'Адрес обязателен'),
+  category: z.string().min(1, 'Категория обязательна'),
+  status: z.enum(['active', 'inactive']).default('active'),
+});
+
+export const updateSupplierSchema = createSupplierSchema.partial();
+
+// ============================================================
+// TechEquipment Schemas
+// ============================================================
+
+export const createTechEquipmentSchema = z.object({
+  name: z.string().min(1, 'Наименование обязательно'),
+  type: z.string().min(1, 'Тип обязателен'),
+  inventoryNumber: z.string().min(1, 'Инвентарный номер обязателен'),
+  status: z.enum(['in-use', 'warehouse', 'repair']).default('warehouse'),
+  location: z.string().min(1, 'Местонахождение обязательно'),
+  acquisitionDate: z.preprocess(stringToDate, z.date().optional().nullable()),
+});
+
+export const updateTechEquipmentSchema = createTechEquipmentSchema.partial();

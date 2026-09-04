@@ -8,10 +8,13 @@ export interface UnitRate {
   category: string;
   unit: string;
   pricePerUnit: number;
+  targetType: 'client' | 'employee';
   description: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  clientPrice?: number;
+  employeePrice?: number;
 }
 
 export interface CreateUnitRateInput {
@@ -19,6 +22,7 @@ export interface CreateUnitRateInput {
   category: string;
   unit?: string;
   pricePerUnit: number;
+  targetType?: 'client' | 'employee';
   description?: string | null;
   isActive?: boolean;
 }
@@ -28,6 +32,7 @@ export interface UpdateUnitRateInput {
   category?: string;
   unit?: string;
   pricePerUnit?: number;
+  targetType?: 'client' | 'employee';
   description?: string | null;
   isActive?: boolean;
 }

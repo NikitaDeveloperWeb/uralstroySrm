@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Pencil,
   Trash2,
@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { Modal } from '@/shared/components/ui/Modal';
+import { Pagination } from '@/shared/components/ui/Pagination';
 
 
 
@@ -32,10 +33,12 @@ interface MovementRecord {
   itemName: string;
   type: 'income' | 'expense';
   quantity: number;
+  amount?: number;
   unit: string;
   date: string;
   comment: string;
   responsible: string;
+  supplierId?: number;
 }
 
 const initialItems: WarehouseItem[] = [
@@ -206,6 +209,10 @@ export default function WarehousePage() {
   const [reportFilter, setReportFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [reportSearch, setReportSearch] = useState('');
   const [activeView, setActiveView] = useState<'list' | 'reports'>('list');
+  const [itemsPage, setItemsPage] = useState(1);
+  const [movementsPage, setMovementsPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+  const MOVEMENTS_PER_PAGE = 10;
 
   // Movement modal states
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
@@ -213,10 +220,15 @@ export default function WarehousePage() {
   const [movementFormData, setMovementFormData] = useState<Partial<MovementRecord>>({
     itemId: 0,
     quantity: 0,
+    amount: 0,
     date: new Date().toISOString().split('T')[0],
     responsible: '',
     comment: '',
+    supplierId: 0,
   });
+
+  // Suppliers list
+  const [suppliers, setSuppliers] = useState<Array<{ id: number; companyName: string; category: string }>>([]);
 
   const filteredItems = items.filter(
     (item) =>
@@ -234,6 +246,34 @@ export default function WarehousePage() {
         m.comment.toLowerCase().includes(reportSearch.toLowerCase()),
     )
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const totalPagesItems = Math.ceil(filteredItems.length / ITEMS_PER_PAGE) || 1;
+  const paginatedItems = filteredItems.slice(
+    (itemsPage - 1) * ITEMS_PER_PAGE,
+    itemsPage * ITEMS_PER_PAGE,
+  );
+
+  const totalPagesMovements = Math.ceil(filteredMovements.length / MOVEMENTS_PER_PAGE) || 1;
+  const paginatedMovements = filteredMovements.slice(
+    (movementsPage - 1) * MOVEMENTS_PER_PAGE,
+    movementsPage * MOVEMENTS_PER_PAGE,
+  );
+
+  const handleItemsPageChange = (page: number) => {
+    setItemsPage(page);
+  };
+
+  const handleMovementsPageChange = (page: number) => {
+    setMovementsPage(page);
+  };
+
+  const handleViewChange = (view: 'list' | 'reports') => {
+    setActiveView(view);
+    setSearchQuery('');
+    setReportSearch('');
+    if (view === 'list') setItemsPage(1);
+    else setMovementsPage(1);
+  };
 
   const totalIncome = filteredMovements
     .filter((m) => m.type === 'income')
@@ -283,20 +323,80 @@ export default function WarehousePage() {
     setMovementFormData({
       itemId: 0,
       quantity: 0,
+      amount: 0,
       date: new Date().toISOString().split('T')[0],
       responsible: '',
       comment: '',
+      supplierId: 0,
     });
     setIsMovementModalOpen(true);
   };
 
-  const handleSaveMovement = () => {
+  const handleSaveMovement = async () => {
     if (!movementFormData.itemId || movementFormData.quantity === 0) return;
 
     const item = getItemById(movementFormData.itemId);
     if (!item) return;
 
-    // Update item quantity
+    // Если это приход и есть поставщик - отправляем на сервер
+    if (movementType === 'income' && movementFormData.supplierId) {
+      try {
+        await fetch('/api/warehouse/movements', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            itemId: movementFormData.itemId,
+            type: 'income',
+            quantity: movementFormData.quantity,
+            amount: movementFormData.amount || 0,
+            date: movementFormData.date,
+            comment: movementFormData.comment,
+            supplierId: movementFormData.supplierId,
+          }),
+        });
+        // После успешного сохранения обновляем локальные данные
+        setItems((prev) =>
+          prev.map((i) => {
+            if (i.id === movementFormData.itemId) {
+              const newQuantity = i.quantity + (movementFormData.quantity || 0);
+              const newStatus =
+                newQuantity === 0
+                  ? 'нет в наличии'
+                  : newQuantity < 10
+                    ? 'критически мало'
+                    : newQuantity < 100
+                      ? 'мало'
+                      : 'достаточно';
+              return {
+                ...i,
+                quantity: newQuantity,
+                lastUpdate: movementFormData.date || new Date().toISOString().split('T')[0],
+                status: newStatus,
+              };
+            }
+            return i;
+          }),
+        );
+        const newMovement: MovementRecord = {
+          id: Math.max(...movements.map((m) => m.id), 0) + 1,
+          itemId: movementFormData.itemId!,
+          itemName: item.name,
+          type: 'income',
+          quantity: movementFormData.quantity!,
+          unit: item.unit,
+          date: movementFormData.date!,
+          comment: movementFormData.comment || '',
+          responsible: movementFormData.responsible || '',
+        };
+        setMovements((prev) => [newMovement, ...prev]);
+        setIsMovementModalOpen(false);
+        return;
+      } catch (err) {
+        console.error('Failed to save movement:', err);
+      }
+    }
+
+    // Update item quantity (fallback for local-only operations)
     if (movementType === 'income') {
       setItems((prev) =>
         prev.map((i) => {
@@ -364,7 +464,7 @@ export default function WarehousePage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900">Склад</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white dark:text-white dark:text-white">Склад</h1>
         <div className="flex gap-2">
           <button
             onClick={() => openMovementModal('income')}
@@ -390,21 +490,21 @@ export default function WarehousePage() {
       {/* Вкладки */}
       <div className="flex gap-2">
         <button
-          onClick={() => { setActiveView('list'); setSearchQuery(''); }}
+          onClick={() => handleViewChange('list')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             activeView === 'list'
               ? 'bg-[#1976d2] text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              : 'bg-gray-100 dark:bg-slate-700 dark:bg-slate-700 text-gray-600 dark:text-slate-300 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600 dark:bg-slate-700'
           }`}>
           <FileText className="w-4 h-4" />
           Список товаров
         </button>
         <button
-          onClick={() => { setActiveView('reports'); setSearchQuery(''); }}
+          onClick={() => handleViewChange('reports')}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
             activeView === 'reports'
               ? 'bg-[#1976d2] text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              : 'bg-gray-100 dark:bg-slate-700 dark:bg-slate-700 text-gray-600 dark:text-slate-300 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600 dark:bg-slate-700'
           }`}>
           <ArrowDownToLine className="w-4 h-4" />
           Отчёты
@@ -414,60 +514,61 @@ export default function WarehousePage() {
       {/* Поиск */}
       <div className="relative">
         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-          <Search className="w-5 h-5 text-gray-400" />
+          <Search className="w-5 h-5 text-gray-400 dark:text-slate-500 dark:text-slate-500" />
         </div>
         <input
           type="text"
           placeholder={activeView === 'reports' ? 'Поиск по отчётам...' : 'Поиск по названию, категории или местоположению...'}
           value={activeView === 'reports' ? reportSearch : searchQuery}
           onChange={(e) => activeView === 'reports' ? setReportSearch(e.target.value) : setSearchQuery(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] text-gray-900"
+          className="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] text-gray-900 dark:text-white dark:text-white dark:bg-slate-700 dark:text-white"
         />
       </div>
 
       {activeView === 'list' && (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="space-y-4">
+        <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b-2 border-gray-200 bg-gray-50">
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+              <tr className="border-b-2 border-gray-200 dark:border-slate-700 dark:border-slate-700 bg-gray-50 dark:bg-slate-700 dark:bg-slate-700">
+                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">
                   Наименование
                 </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">
                   Категория
                 </th>
-                <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700">
+                <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">
                   Количество
                 </th>
-                <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700">
+                <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">
                   Ед. изм.
                 </th>
-                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">
                   Местоположение
                 </th>
-                <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700">
+                <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">
                   Обновлено
                 </th>
-                <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700">
+                <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">
                   Статус
                 </th>
-                <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700">
+                <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">
                   Действия
                 </th>
               </tr>
             </thead>
             <tbody>
-              {filteredItems.map((item) => (
+              {paginatedItems.map((item) => (
                 <tr
                   key={item.id}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                  <td className="py-4 px-6 text-gray-900 font-medium">{item.name}</td>
-                  <td className="py-4 px-6 text-gray-600">{item.category}</td>
-                  <td className="py-4 px-6 text-gray-600 text-center">{item.quantity}</td>
-                  <td className="py-4 px-6 text-gray-600 text-center">{item.unit}</td>
-                  <td className="py-4 px-6 text-gray-600">{item.location}</td>
-                  <td className="py-4 px-6 text-gray-600 text-center">{item.lastUpdate}</td>
+                  className="border-b border-gray-100 dark:border-slate-700 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-700 dark:bg-slate-700 transition-colors">
+                  <td className="py-4 px-6 text-gray-900 dark:text-white dark:text-white font-medium">{item.name}</td>
+                  <td className="py-4 px-6 text-gray-600 dark:text-slate-300 dark:text-slate-300">{item.category}</td>
+                  <td className="py-4 px-6 text-gray-600 dark:text-slate-300 dark:text-slate-300 text-center">{item.quantity}</td>
+                  <td className="py-4 px-6 text-gray-600 dark:text-slate-300 dark:text-slate-300 text-center">{item.unit}</td>
+                  <td className="py-4 px-6 text-gray-600 dark:text-slate-300 dark:text-slate-300">{item.location}</td>
+                  <td className="py-4 px-6 text-gray-600 dark:text-slate-300 dark:text-slate-300 text-center">{item.lastUpdate}</td>
                   <td className="py-4 px-6 text-center">
                     <span
                       className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${statusColors[item.status]}`}>
@@ -494,6 +595,14 @@ export default function WarehousePage() {
           </table>
         </div>
       </div>
+      <Pagination
+        currentPage={itemsPage}
+        totalPages={totalPagesItems}
+        onPageChange={handleItemsPageChange}
+        totalItems={filteredItems.length}
+        itemsPerPage={ITEMS_PER_PAGE}
+      />
+      </div>
       )}
 
       {activeView === 'reports' && (
@@ -505,7 +614,7 @@ export default function WarehousePage() {
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 reportFilter === 'all'
                   ? 'bg-[#1976d2] text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-slate-700 dark:bg-slate-700 text-gray-600 dark:text-slate-300 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600 dark:bg-slate-700'
               }`}>
               Все
             </button>
@@ -533,54 +642,55 @@ export default function WarehousePage() {
 
           {/* Статистика */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-[#1976d2]">
-              <p className="text-sm text-gray-500 mb-1">Всего записей</p>
-              <p className="text-2xl font-bold text-gray-900">{filteredMovements.length}</p>
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg shadow-md p-6 border-l-4 border-[#1976d2]">
+              <p className="text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400 mb-1">Всего записей</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white dark:text-white">{filteredMovements.length}</p>
             </div>
-            <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
-              <p className="text-sm text-gray-500 mb-1">Общий приход</p>
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg shadow-md p-6 border-l-4 border-green-500">
+              <p className="text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400 mb-1">Общий приход</p>
               <p className="text-2xl font-bold text-green-600">{totalIncome}</p>
             </div>
-            <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-red-500">
-              <p className="text-sm text-gray-500 mb-1">Общий уход</p>
+            <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg shadow-md p-6 border-l-4 border-red-500">
+              <p className="text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400 mb-1">Общий уход</p>
               <p className="text-2xl font-bold text-red-600">{totalExpense}</p>
             </div>
           </div>
 
           {/* Таблица отчётов */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <div className="space-y-4">
+          <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg shadow-md overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b-2 border-gray-200 bg-gray-50">
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                  <tr className="border-b-2 border-gray-200 dark:border-slate-700 dark:border-slate-700 bg-gray-50 dark:bg-slate-700 dark:bg-slate-700">
+                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">
                       Тип
                     </th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">
                       Наименование
                     </th>
-                    <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700">
+                    <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">
                       Количество
                     </th>
-                    <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700">
+                    <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">
                       Ед. изм.
                     </th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">
                       Дата
                     </th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">
                       Ответственный
                     </th>
-                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700">
+                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">
                       Комментарий
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredMovements.map((movement) => (
+                  {paginatedMovements.map((movement) => (
                     <tr
                       key={movement.id}
-                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                      className="border-b border-gray-100 dark:border-slate-700 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-700 dark:bg-slate-700 transition-colors">
                       <td className="py-4 px-6">
                         <span
                           className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${
@@ -596,8 +706,8 @@ export default function WarehousePage() {
                           {movement.type === 'income' ? 'Приход' : 'Уход'}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-gray-900 font-medium">{movement.itemName}</td>
-                      <td className="py-4 px-6 text-gray-600 text-center">
+                      <td className="py-4 px-6 text-gray-900 dark:text-white dark:text-white font-medium">{movement.itemName}</td>
+                      <td className="py-4 px-6 text-gray-600 dark:text-slate-300 dark:text-slate-300 text-center">
                         <span
                           className={
                             movement.type === 'income'
@@ -607,10 +717,10 @@ export default function WarehousePage() {
                           {movement.type === 'income' ? '+' : '-'}{movement.quantity}
                         </span>
                       </td>
-                      <td className="py-4 px-6 text-gray-600 text-center">{movement.unit}</td>
-                      <td className="py-4 px-6 text-gray-600">{movement.date}</td>
-                      <td className="py-4 px-6 text-gray-600">{movement.responsible}</td>
-                      <td className="py-4 px-6 text-gray-600">{movement.comment}</td>
+                      <td className="py-4 px-6 text-gray-600 dark:text-slate-300 dark:text-slate-300 text-center">{movement.unit}</td>
+                      <td className="py-4 px-6 text-gray-600 dark:text-slate-300 dark:text-slate-300">{movement.date}</td>
+                      <td className="py-4 px-6 text-gray-600 dark:text-slate-300 dark:text-slate-300">{movement.responsible}</td>
+                      <td className="py-4 px-6 text-gray-600 dark:text-slate-300 dark:text-slate-300">{movement.comment}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -618,9 +728,17 @@ export default function WarehousePage() {
             </div>
             {filteredMovements.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">Отчёты не найдены</p>
+                <p className="text-gray-500 dark:text-slate-400 dark:text-slate-400 text-lg">Отчёты не найдены</p>
               </div>
             )}
+          </div>
+          <Pagination
+            currentPage={movementsPage}
+            totalPages={totalPagesMovements}
+            onPageChange={handleMovementsPageChange}
+            totalItems={filteredMovements.length}
+            itemsPerPage={MOVEMENTS_PER_PAGE}
+          />
           </div>
         </div>
       )}
@@ -635,21 +753,21 @@ export default function WarehousePage() {
         title={editingItem ? 'Редактировать товар' : 'Новый товар'}>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Наименование</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Наименование</label>
             <input
               type="text"
               value={formData.name || ''}
               onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Категория</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Категория</label>
               <select
                 value={formData.category || 'кирпич'}
                 onChange={(e) => setFormData((prev) => ({ ...prev, category: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]">
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white">
                 <option value="кирпич">Кирпич</option>
                 <option value="цемент">Цемент</option>
                 <option value="дерево">Дерево</option>
@@ -659,11 +777,11 @@ export default function WarehousePage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Статус</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Статус</label>
               <select
                 value={formData.status || 'достаточно'}
                 onChange={(e) => setFormData((prev) => ({ ...prev, status: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]">
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white">
                 <option value="достаточно">Достаточно</option>
                 <option value="мало">Мало</option>
                 <option value="критически мало">Критически мало</option>
@@ -673,22 +791,22 @@ export default function WarehousePage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Количество</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Количество</label>
               <input
                 type="number"
                 value={formData.quantity ?? ''}
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, quantity: Number(e.target.value) }))
                 }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ед. изм.</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Ед. изм.</label>
               <select
                 value={formData.unit || 'шт'}
                 onChange={(e) => setFormData((prev) => ({ ...prev, unit: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]">
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white">
                 <option value="шт">шт</option>
                 <option value="м²">м²</option>
                 <option value="м³">м³</option>
@@ -698,21 +816,21 @@ export default function WarehousePage() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Местоположение</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Местоположение</label>
             <input
               type="text"
               value={formData.location || ''}
               onChange={(e) => setFormData((prev) => ({ ...prev, location: e.target.value }))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Дата обновления</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Дата обновления</label>
             <input
               type="date"
               value={formData.lastUpdate || ''}
               onChange={(e) => setFormData((prev) => ({ ...prev, lastUpdate: e.target.value }))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
             />
           </div>
           <div className="flex gap-4 pt-4">
@@ -727,7 +845,7 @@ export default function WarehousePage() {
                 setEditingItem(null);
                 setFormData({});
               }}
-              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold transition-colors">
+              className="flex-1 bg-gray-200 dark:bg-slate-700 dark:bg-slate-700 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300 dark:text-slate-300 dark:text-slate-300 py-3 px-4 rounded-lg font-semibold transition-colors">
               Отмена
             </button>
           </div>
@@ -742,21 +860,23 @@ export default function WarehousePage() {
           setMovementFormData({
             itemId: 0,
             quantity: 0,
+            amount: 0,
             date: new Date().toISOString().split('T')[0],
             responsible: '',
             comment: '',
+            supplierId: 0,
           });
         }}
         title={movementType === 'income' ? 'Приход товара' : 'Уход товара'}>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Товар</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Товар</label>
             <select
               value={movementFormData.itemId || 0}
               onChange={(e) =>
                 setMovementFormData((prev) => ({ ...prev, itemId: Number(e.target.value) }))
               }
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]">
+              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white">
               <option value={0}>Выберите товар</option>
               {items.map((item) => (
                 <option key={item.id} value={item.id}>
@@ -767,7 +887,7 @@ export default function WarehousePage() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Количество</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Количество</label>
               <input
                 type="number"
                 value={movementFormData.quantity || 0}
@@ -777,41 +897,77 @@ export default function WarehousePage() {
                     quantity: Number(e.target.value),
                   }))
                 }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Дата</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Дата</label>
               <input
                 type="date"
                 value={movementFormData.date || ''}
                 onChange={(e) =>
                   setMovementFormData((prev) => ({ ...prev, date: e.target.value }))
                 }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
               />
             </div>
           </div>
+          {movementType === 'income' && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Поставщик</label>
+                  <select
+                    value={movementFormData.supplierId || 0}
+                    onChange={(e) =>
+                      setMovementFormData((prev) => ({ ...prev, supplierId: Number(e.target.value) }))
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white">
+                    <option value={0}>Не выбран</option>
+                    {suppliers.map((supplier) => (
+                      <option key={supplier.id} value={supplier.id}>
+                        {supplier.companyName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Сумма (₽)</label>
+                  <input
+                    type="number"
+                    value={movementFormData.amount || 0}
+                    onChange={(e) =>
+                      setMovementFormData((prev) => ({
+                        ...prev,
+                        amount: Number(e.target.value),
+                      }))
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                  />
+                </div>
+              </div>
+            </>
+          )}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Ответственный</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Ответственный</label>
             <input
               type="text"
               value={movementFormData.responsible || ''}
               onChange={(e) =>
                 setMovementFormData((prev) => ({ ...prev, responsible: e.target.value }))
               }
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Комментарий</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Комментарий</label>
             <input
               type="text"
               value={movementFormData.comment || ''}
               onChange={(e) =>
                 setMovementFormData((prev) => ({ ...prev, comment: e.target.value }))
               }
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
             />
           </div>
           <div className="flex gap-4 pt-4">
@@ -826,7 +982,7 @@ export default function WarehousePage() {
             </button>
             <button
               onClick={() => setIsMovementModalOpen(false)}
-              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold transition-colors">
+              className="flex-1 bg-gray-200 dark:bg-slate-700 dark:bg-slate-700 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300 dark:text-slate-300 dark:text-slate-300 py-3 px-4 rounded-lg font-semibold transition-colors">
               Отмена
             </button>
           </div>

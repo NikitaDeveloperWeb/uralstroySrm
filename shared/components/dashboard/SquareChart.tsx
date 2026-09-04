@@ -17,8 +17,8 @@ const data = [
 
 export function SquareChart() {
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">Выполненная квадратура</h2>
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Выполненная квадратура</h2>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data}>

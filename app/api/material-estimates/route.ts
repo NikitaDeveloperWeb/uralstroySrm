@@ -74,7 +74,13 @@ export async function POST(request: NextRequest) {
     const validated = createMaterialEstimateSchema.parse(body);
 
     const estimate = await prisma.materialEstimate.create({
-      data: validated,
+      data: {
+        projectId: validated.projectId,
+        name: validated.name,
+        quantity: validated.quantity,
+        cost: validated.cost,
+        category: validated.category || null,
+      },
       include: {
         project: true,
       },

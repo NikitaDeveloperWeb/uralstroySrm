@@ -22,8 +22,8 @@ interface CalendarGridProps {
 }
 
 const workplaceColors: Record<string, string> = {
-  цех: 'bg-blue-100 text-blue-800',
-  монтаж: 'bg-purple-100 text-purple-800',
+  цех: 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300',
+  монтаж: 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300',
 };
 
 const fullNameShort = (name: string) => {
@@ -74,27 +74,27 @@ export function CalendarGrid({ employees, shifts, onCellClick }: CalendarGridPro
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="p-4 border-b border-gray-200">
+    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+      <div className="p-4 border-b border-gray-200 dark:border-slate-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <button onClick={prevMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <button onClick={prevMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-600 dark:bg-slate-700 rounded-lg transition-colors">
+              <svg className="w-5 h-5 text-gray-600 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
-            <h3 className="text-lg font-bold text-gray-900 min-w-[180px] text-center">
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white min-w-[180px] text-center">
               {monthName} {year}
             </h3>
-            <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <button onClick={nextMonth} className="p-2 hover:bg-gray-100 dark:hover:bg-slate-600 dark:bg-slate-700 rounded-lg transition-colors">
+              <svg className="w-5 h-5 text-gray-600 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
           </div>
           <button
             onClick={goToToday}
-            className="text-sm font-medium text-blue-600 hover:text-blue-700 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition-colors"
+            className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 px-3 py-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
           >
             Сегодня
           </button>
@@ -104,14 +104,14 @@ export function CalendarGrid({ employees, shifts, onCellClick }: CalendarGridPro
       <div className="overflow-x-auto">
         <div className="min-w-[900px]">
           <div className="grid" style={{ gridTemplateColumns: `180px repeat(${daysInMonth}, minmax(48px, 1fr))` }}>
-            <div className="p-3 border-b border-r border-gray-200 bg-gray-50" />
+            <div className="p-3 border-b border-r border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700" />
 
             {Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
               <div
                 key={day}
-                className={`p-2 text-center border-b border-gray-200 ${isToday(day) ? 'bg-blue-50' : 'bg-gray-50'}`}
+                className={`p-2 text-center border-b border-gray-200 dark:border-slate-700 ${isToday(day) ? 'bg-blue-50 dark:bg-blue-900/30' : 'bg-gray-50 dark:bg-slate-700'}`}
               >
-                <span className={`text-sm font-semibold ${isToday(day) ? 'text-blue-600' : 'text-gray-700'}`}>
+                <span className={`text-sm font-semibold ${isToday(day) ? 'text-blue-600' : 'text-gray-700 dark:text-slate-300'}`}>
                   {day}
                 </span>
               </div>
@@ -119,14 +119,14 @@ export function CalendarGrid({ employees, shifts, onCellClick }: CalendarGridPro
 
             {employees.map(emp => (
               <>
-                <div key={emp.id} className="p-3 border-b border-r border-gray-200 flex items-center gap-2 bg-white hover:bg-gray-50 transition-colors">
+                <div key={emp.id} className="p-3 border-b border-r border-gray-200 dark:border-slate-700 flex items-center gap-2 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700 transition-colors">
                   <div className="w-8 h-8 bg-[#1976d2] rounded-full flex items-center justify-center flex-shrink-0">
                     <span className="text-white text-xs font-bold">
                       {emp.fullName.split(' ').map(n => n[0]).join('')}
                     </span>
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{fullNameShort(emp.fullName)}</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{fullNameShort(emp.fullName)}</p>
                     <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${workplaceColors[emp.workplace]}`}>
                       {emp.workplace}
                     </span>
@@ -140,22 +140,22 @@ export function CalendarGrid({ employees, shifts, onCellClick }: CalendarGridPro
                   const dayOfWeek = dateObj.getDay();
                   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-                  let cellBg = today ? 'bg-blue-50/50' : 'bg-white';
+                  let cellBg = today ? 'bg-blue-50/50 dark:bg-blue-900/20' : 'bg-white dark:bg-slate-800';
                   let content: React.ReactNode = null;
 
                   if (shift) {
                     if (shift.hours > 0) {
-                      cellBg = 'bg-blue-100';
+                      cellBg = 'bg-blue-100 dark:bg-blue-900/40';
                       content = (
                         <span className="text-xs font-bold text-blue-700">{shift.hours}</span>
                       );
                     }
                   } else if (isWeekend) {
                     content = (
-                      <span className="text-xs font-bold text-green-600">в</span>
+                      <span className="text-xs font-bold text-green-600 dark:text-green-400">в</span>
                     );
                     if (!today) {
-                      cellBg = 'bg-green-50';
+                      cellBg = 'bg-green-50 dark:bg-green-900/20';
                     }
                   }
 
@@ -163,7 +163,7 @@ export function CalendarGrid({ employees, shifts, onCellClick }: CalendarGridPro
                     <div
                       key={day}
                       onClick={() => onCellClick(emp.id, `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`)}
-                      className={`p-1 text-center border-b border-r border-gray-100 cursor-pointer hover:bg-blue-100 transition-colors ${cellBg}`}
+                      className={`p-1 text-center border-b border-r border-gray-100 dark:border-slate-700 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors ${cellBg}`}
                     >
                       {content}
                     </div>
@@ -175,17 +175,17 @@ export function CalendarGrid({ employees, shifts, onCellClick }: CalendarGridPro
         </div>
       </div>
 
-      <div className="p-3 border-t border-gray-200 bg-gray-50 flex items-center gap-6 text-xs text-gray-600">
+      <div className="p-3 border-t border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700 flex items-center gap-6 text-xs text-gray-600 dark:text-slate-300">
         <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded bg-blue-100" />
+          <div className="w-4 h-4 rounded bg-blue-100 dark:bg-blue-900/40" />
           <span>Отработанное время</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded bg-green-500 text-white flex items-center justify-center text-[9px] font-bold">в</div>
+          <div className="w-4 h-4 rounded bg-green-500 dark:bg-green-600 text-white flex items-center justify-center text-[9px] font-bold">в</div>
           <span>Выходной</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded bg-blue-50 border border-blue-300" />
+          <div className="w-4 h-4 rounded bg-blue-50 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700" />
           <span>Сегодня</span>
         </div>
       </div>

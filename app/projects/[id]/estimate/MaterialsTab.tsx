@@ -5,6 +5,7 @@ import { EstimateTable } from '@/shared/components/estimates/EstimateTable';
 import { useMaterialEstimateStore } from '@/shared/stores/materialEstimateStore';
 import type { MaterialTemplate } from '@/shared/stores/materialEstimateStore';
 import type { ProjectMaterial } from '@/shared/types/project';
+import type { Material } from '@/shared/types/material';
 
 interface MaterialsTabProps {
   items: ProjectMaterial[];
@@ -15,15 +16,21 @@ interface MaterialsTabProps {
 }
 
 export function MaterialsTab({ items, templates, onSave, isSaving, projectId }: MaterialsTabProps) {
+  console.log('=== MaterialsTab rendered ===', { items, templates, projectId });
   const createMaterialEstimate = useMaterialEstimateStore(state => state.createMaterialEstimate);
   const updateMaterialEstimate = useMaterialEstimateStore(state => state.updateMaterialEstimate);
   const deleteMaterialEstimate = useMaterialEstimateStore(state => state.deleteMaterialEstimate);
   const fetchMaterialEstimates = useMaterialEstimateStore(state => state.fetchMaterialEstimates);
+  const materials = useMaterialEstimateStore(state => state.materials);
+  const fetchMaterials = useMaterialEstimateStore(state => state.fetchMaterials);
 
   const [editItems, setEditItems] = useState<ProjectMaterial[]>(() => [...items]);
   const [editing, setEditing] = useState(false);
 
-  // Синхронизируем editItems с items, когда не в режиме редактирования
+  useEffect(() => {
+    fetchMaterials();
+  }, [fetchMaterials]);
+
   useEffect(() => {
     if (!editing) {
       setEditItems([...items]);
@@ -31,13 +38,11 @@ export function MaterialsTab({ items, templates, onSave, isSaving, projectId }: 
   }, [items, editing]);
 
   const handleApplyTemplate = async (template: { name: string; quantity: string; cost: number; category?: string | null }) => {
-    // Если не в режиме редактирования — просто включаем его
-    // editItems уже синхронизирован с items через useEffect
     if (!editing) {
       setEditing(true);
     }
     const newItem: ProjectMaterial = {
-      id: Date.now(), // temporary ID
+      id: Date.now(),
       projectId,
       name: template.name,
       quantity: template.quantity,
@@ -45,17 +50,31 @@ export function MaterialsTab({ items, templates, onSave, isSaving, projectId }: 
       category: template.category,
       createdAt: new Date().toISOString(),
     };
-    setEditItems((prev: ProjectMaterial[]) => [...prev, newItem]);
+    setEditItems((prev) => [...prev, newItem]);
+  };
+
+  const handleApplyMaterial = (material: Material) => {
+    if (!editing) {
+      setEditing(true);
+    }
+    const newItem: ProjectMaterial = {
+      id: Date.now(),
+      projectId,
+      name: material.name,
+      quantity: `${material.quantity} ${material.unit}`,
+      cost: material.cost || 0,
+      category: material.category,
+      createdAt: new Date().toISOString(),
+    };
+    setEditItems((prev) => [...prev, newItem]);
   };
 
   const handleSave = async () => {
     setEditing(false);
     try {
-      // Sync with DB
       const existingIds = new Set(items.map(i => i.id));
       const newIds = new Set(editItems.map(i => i.id).filter(id => !existingIds.has(id)));
       
-      // Create new items
       for (const item of editItems) {
         if (item.id && !existingIds.has(item.id)) {
           await createMaterialEstimate({
@@ -68,7 +87,6 @@ export function MaterialsTab({ items, templates, onSave, isSaving, projectId }: 
         }
       }
       
-      // Update changed items
       for (const item of editItems) {
         if (item.id && existingIds.has(item.id)) {
           const original = items.find(i => i.id === item.id);
@@ -83,7 +101,6 @@ export function MaterialsTab({ items, templates, onSave, isSaving, projectId }: 
         }
       }
       
-      // Delete removed items
       for (const item of items) {
         if (!editItems.some(e => e.id === item.id)) {
           await deleteMaterialEstimate(item.id);
@@ -131,14 +148,17 @@ export function MaterialsTab({ items, templates, onSave, isSaving, projectId }: 
     <EstimateTable
       items={mergedItems}
       templates={templates}
+      materials={materials}
       title="Смета материалов"
       itemLabel="Материал"
       onSave={editing ? handleSave : onSave}
+      onToggleEdit={() => setEditing(prev => !prev)}
       onAddRow={editing ? handleAddRow : () => {
         setEditing(true);
         handleAddRow();
       }}
       onApplyTemplate={handleApplyTemplate}
+      onApplyMaterial={handleApplyMaterial}
       onChange={handleChange}
       onRemoveRow={handleRemoveRow}
       isSaving={isSaving}

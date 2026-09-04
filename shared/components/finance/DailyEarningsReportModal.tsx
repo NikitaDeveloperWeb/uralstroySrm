@@ -33,7 +33,7 @@ export function DailyEarningsReportModal({ isOpen, onClose, onSubmit, existingRe
   const [customJobs, setCustomJobs] = useState('');
 
   const filteredReports = useMemo(
-    () => existingReports.filter((r) => r.date === selectedDate),
+    () => existingReports.filter((r) => r.date.startsWith(selectedDate)),
     [existingReports, selectedDate]
   );
 
@@ -60,63 +60,63 @@ export function DailyEarningsReportModal({ isOpen, onClose, onSubmit, existingRe
   const totalEarnings = filteredReports.reduce((sum, r) => sum + r.hours * r.rate, 0);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Заработок за день" maxWidth="max-w-3xl">
+    <Modal isOpen={isOpen} onClose={onClose} title="Заработок за день">
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Дата</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">Дата</label>
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="w-full sm:w-64 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+            className="w-full sm:w-64 rounded-lg border border-gray-300 dark:border-slate-600 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Отчетность сотрудников</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Отчетность сотрудников</label>
           {filteredReports.length > 0 ? (
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
+            <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-slate-700">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50">
+                <thead className="bg-gray-50 dark:bg-slate-700">
                   <tr>
-                    <th className="text-left px-4 py-2.5 font-medium text-gray-700">Сотрудник</th>
-                    <th className="text-center px-4 py-2.5 font-medium text-gray-700">Часы</th>
-                    <th className="text-center px-4 py-2.5 font-medium text-gray-700">Ставка/ч</th>
-                    <th className="text-center px-4 py-2.5 font-medium text-gray-700">Заработок</th>
-                    <th className="text-center px-4 py-2.5 font-medium text-gray-700">Задачи</th>
+                    <th className="text-left px-4 py-2.5 font-medium text-gray-700 dark:text-slate-300">Сотрудник</th>
+                    <th className="text-center px-4 py-2.5 font-medium text-gray-700 dark:text-slate-300">Часы</th>
+                    <th className="text-center px-4 py-2.5 font-medium text-gray-700 dark:text-slate-300">Ставка/ч</th>
+                    <th className="text-center px-4 py-2.5 font-medium text-gray-700 dark:text-slate-300">Заработок</th>
+                    <th className="text-center px-4 py-2.5 font-medium text-gray-700 dark:text-slate-300">Задачи</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredReports.map((report) => (
-                    <tr key={report.id} className="border-t border-gray-100 hover:bg-gray-50">
-                      <td className="px-4 py-2.5 text-gray-900 font-medium">{report.employeeName}</td>
-                      <td className="px-4 py-2.5 text-center text-gray-600">{report.hours}</td>
-                      <td className="px-4 py-2.5 text-center text-gray-600">{report.rate} ₽</td>
+                    <tr key={report.id} className="border-t border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700">
+                      <td className="px-4 py-2.5 text-gray-900 dark:text-white font-medium">{report.employeeName}</td>
+                      <td className="px-4 py-2.5 text-center text-gray-600 dark:text-slate-300">{report.hours}</td>
+                      <td className="px-4 py-2.5 text-center text-gray-600 dark:text-slate-300">{report.rate} ₽</td>
                       <td className="px-4 py-2.5 text-center font-semibold text-red-700">
                         {(report.hours * report.rate).toLocaleString('ru-RU')} ₽
                       </td>
-                      <td className="px-4 py-2.5 text-center text-gray-600">{report.completedJobs}</td>
+                      <td className="px-4 py-2.5 text-center text-gray-600 dark:text-slate-300">{report.completedJobs}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <div className="text-center py-8 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-500">Нет отчетов от сотрудников за эту дату</p>
+            <div className="text-center py-8 bg-gray-50 dark:bg-slate-700 rounded-lg">
+              <p className="text-sm text-gray-500 dark:text-slate-400">Нет отчетов от сотрудников за эту дату</p>
             </div>
           )}
         </div>
 
-        <div className="border-t border-gray-200 pt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-3">Добавить вручную</label>
+        <div className="border-t border-gray-200 dark:border-slate-700 pt-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-3">Добавить вручную</label>
           <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
             <input
               type="text"
               value={customName}
               onChange={(e) => setCustomName(e.target.value)}
               placeholder="ФИО"
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="rounded-lg border border-gray-300 dark:border-slate-600 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
             />
             <input
               type="number"
@@ -125,7 +125,7 @@ export function DailyEarningsReportModal({ isOpen, onClose, onSubmit, existingRe
               placeholder="Часы"
               min="0"
               step="0.5"
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="rounded-lg border border-gray-300 dark:border-slate-600 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
             />
             <input
               type="number"
@@ -133,7 +133,7 @@ export function DailyEarningsReportModal({ isOpen, onClose, onSubmit, existingRe
               onChange={(e) => setCustomRate(e.target.value)}
               placeholder="Ставка/ч (₽)"
               min="0"
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="rounded-lg border border-gray-300 dark:border-slate-600 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
             />
             <input
               type="number"
@@ -141,7 +141,7 @@ export function DailyEarningsReportModal({ isOpen, onClose, onSubmit, existingRe
               onChange={(e) => setCustomJobs(e.target.value)}
               placeholder="Задачи"
               min="0"
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="rounded-lg border border-gray-300 dark:border-slate-600 px-3 py-2 text-sm focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
             />
             <button
               type="button"
@@ -160,11 +160,11 @@ export function DailyEarningsReportModal({ isOpen, onClose, onSubmit, existingRe
           </span>
         </div>
 
-        <div className="flex justify-end gap-3 pt-2 border-t border-gray-200">
+        <div className="flex justify-end gap-3 pt-2 border-t border-gray-200 dark:border-slate-700">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="px-4 py-2 rounded-lg border border-gray-300 dark:border-slate-600 text-sm font-medium text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700"
           >
             Закрыть
           </button>

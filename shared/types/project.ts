@@ -2,6 +2,8 @@
 // Общие типы для Project API
 // ============================================================
 
+import type { Client } from './client';
+
 export interface ProjectMaterial {
   id: number;
   projectId: number;
@@ -59,6 +61,8 @@ export interface Project {
   unitRate?: UnitRate | null;
   brigadeId: number | null;
   brigade?: Brigade | null;
+  clientId: number | null;
+  client?: Client | null;
   materials?: ProjectMaterial[];
   completedWorks?: ProjectCompletedWork[];
   transactions?: ProjectTransaction[];
@@ -93,7 +97,7 @@ export interface Brigade {
   name: string;
   leaderId: number;
   memberIds: string;
-  skills: string;
+  skills: string | string[];
   employees?: Employee[];
   projects?: Project[];
 }
@@ -108,7 +112,7 @@ export interface Employee {
   workplace: string;
   paymentType: string;
   employmentType: string;
-  skills: string;
+  skills: string | string[];
   brigadeId: number | null;
 }
 
@@ -127,6 +131,7 @@ export interface CreateProjectInput {
   prepaymentDate?: string | null;
   unitRateId?: number | null;
   brigadeId?: number | null;
+  clientId?: number | null;
   
   // Поля для карты объекта
   floors?: number | null;
@@ -164,6 +169,7 @@ export interface UpdateProjectInput {
   prepaymentDate?: string | null;
   unitRateId?: number | null;
   brigadeId?: number | null;
+  clientId?: number | null;
   
   // Поля для карты объекта
   floors?: number | null;

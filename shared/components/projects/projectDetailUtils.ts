@@ -33,6 +33,7 @@ export const TYPE_ICONS: Record<string, string> = {
 export const STATUS_COLORS: Record<string, string> = {
   создан: 'bg-gray-500',
   'в работе': 'bg-blue-500',
+  'на паузе': 'bg-yellow-500',
   завершен: 'bg-green-500',
 };
 
@@ -42,14 +43,33 @@ export const COMPLEXITY_COLORS: Record<string, string> = {
   сложный: 'bg-red-500',
 };
 
-export const PAYMENT_CATEGORIES = [
+export interface PaymentCategory {
+  name: string;
+  percentage: number;
+}
+
+export const DEFAULT_PAYMENT_CATEGORIES: PaymentCategory[] = [
+  { name: 'Цех', percentage: 30 },
+  { name: 'Монтажники', percentage: 45 },
+  { name: 'Премия цеха', percentage: 10 },
+  { name: 'Дополнительно', percentage: 15 },
+];
+
+export const BANYA_PAYMENT_CATEGORIES: PaymentCategory[] = [
   { name: 'Цех', percentage: 5 },
   { name: 'Монтажники', percentage: 5 },
   { name: 'Премия цеха', percentage: 2.5 },
   { name: 'Премия монтажников', percentage: 2.5 },
 ];
 
+// Backward compatibility alias
+export const PAYMENT_CATEGORIES = BANYA_PAYMENT_CATEGORIES;
+
 export const MANAGER_PERCENTAGE = 5;
+
+export function getPaymentCategories(projectType: string): PaymentCategory[] {
+  return projectType === 'баня' ? BANYA_PAYMENT_CATEGORIES : DEFAULT_PAYMENT_CATEGORIES;
+}
 
 export const MATERIALS_BREAKDOWN = [
   { label: 'Каркасы', qtyMultiplier: 0.1, perM2: 2778 },
@@ -59,7 +79,7 @@ export const MATERIALS_BREAKDOWN = [
   { label: 'Стропила', qtyMultiplier: 0.4, perM2: 1200 },
 ];
 
-export const STATUS_OPTIONS = ['создан', 'в работе', 'завершен'] as const;
+export const STATUS_OPTIONS = ['создан', 'в работе', 'на паузе', 'завершен'] as const;
 export const COMPLEXITY_OPTIONS = ['легкий', 'средний', 'сложный'] as const;
 
 export function capitalize(str: string): string {

@@ -22,7 +22,16 @@ export async function GET(
       return errorResponse('Товар не найден', 404);
     }
 
-    return successResponse(item);
+    // Маппинг статусов из БД на фронтенд
+    const statusMap: Record<string, string> = {
+      'достаточно': 'in-stock',
+      'мало': 'in-stock',
+      'критически мало': 'in-stock',
+      'нет в наличии': 'in-stock',
+      'ordered': 'ordered',
+    };
+
+    return successResponse({ ...item, status: statusMap[item.status] || 'in-stock' });
   } catch (error) {
     console.error('GET /api/warehouse/[id] error:', error);
     return errorResponse('Не удалось получить товар', 500);
@@ -39,9 +48,27 @@ export async function PATCH(
     const body = await request.json();
     const validated = updateWarehouseItemSchema.parse(body);
 
+    // Маппинг статусов на значения БД
+    const data: Record<string, unknown> = {};
+    if (validated.name !== undefined) data.name = validated.name;
+    if (validated.category !== undefined) data.category = validated.category;
+    if (validated.quantity !== undefined) data.quantity = validated.quantity;
+    if (validated.unit !== undefined) data.unit = validated.unit;
+    if (validated.price !== undefined) data.price = validated.price;
+    if (validated.lotNumber !== undefined) data.lotNumber = validated.lotNumber || null;
+    if (validated.cost !== undefined) data.cost = validated.cost;
+    if (validated.location !== undefined) data.location = validated.location || 'Склад';
+    if (validated.status !== undefined) {
+      const dbStatusMap: Record<string, string> = {
+        'in-stock': 'достаточно',
+        'ordered': 'ordered',
+      };
+      data.status = dbStatusMap[validated.status] || validated.status;
+    }
+
     const item = await prisma.warehouseItem.update({
       where: { id: Number(id) },
-      data: validated,
+      data,
       include: {
         movements: true,
         notifications: true,

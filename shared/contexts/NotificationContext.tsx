@@ -2,14 +2,17 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
-import { Notification, getNotifications } from '@/shared/data/notifications';
-import { initialProjects } from '@/shared/data/projects';
-import { initialWarehouseItems } from '@/shared/data/warehouse';
 
 export type NotificationStatus = 'unread' | 'read' | 'archived';
 export type NotificationCategory = 'overdue' | 'low-stock' | 'out-of-stock' | 'finance' | 'schedule' | 'system';
 
-export interface ExtendedNotification extends Notification {
+export interface ExtendedNotification {
+  id: number;
+  type: string;
+  message: string;
+  priority: string;
+  link?: string;
+  date: string;
   status: NotificationStatus;
   category: NotificationCategory;
   createdAt: string;
@@ -57,22 +60,6 @@ export function useNotifications() {
   return useNotificationContext();
 }
 
-const categoryMap: Record<Notification['type'], NotificationCategory> = {
-  overdue: 'overdue',
-  'low-stock': 'low-stock',
-  'out-of-stock': 'out-of-stock',
-};
-
-function convertToExtendedNotification(notification: Notification, index: number): ExtendedNotification {
-  const category = categoryMap[notification.type] || 'system';
-  return {
-    ...notification,
-    status: 'unread',
-    category,
-    createdAt: notification.date,
-  };
-}
-
 export function NotificationProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [state, setState] = useState<NotificationState>({
@@ -87,16 +74,43 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     },
   });
 
-    const loadNotifications = useCallback(() => {
-    const systemNotifications = getNotifications(initialProjects, initialWarehouseItems);
-    const extendedNotifications = systemNotifications.map((n, i) => convertToExtendedNotification(n, i));
-    
-    setState(prev => ({
-      ...prev,
-      notifications: extendedNotifications,
-      unreadCount: extendedNotifications.filter(n => n.status === 'unread').length,
-      isVisible: extendedNotifications.some(n => n.priority === 'high' && n.status === 'unread'),
-    }));
+  const loadNotifications = useCallback(async () => {
+    try {
+      const res = await fetch('/api/notifications');
+      
+      // Handle non-JSON responses (e.g., HTML error pages)
+      const contentType = res.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.warn('Notifications API returned non-JSON response:', res.status);
+        setState(prev => ({
+          ...prev,
+          notifications: [],
+          unreadCount: 0,
+        }));
+        return;
+      }
+      
+      const data = await res.json();
+      const notifications = (data?.data || []).map((n: any) => ({
+        ...n,
+        status: 'unread' as NotificationStatus,
+        category: (n.type || 'system') as NotificationCategory,
+      }));
+      
+      setState(prev => ({
+        ...prev,
+        notifications,
+        unreadCount: notifications.filter((n: any) => n.status === 'unread').length,
+        isVisible: notifications.some((n: any) => n.priority === 'high' && n.status === 'unread'),
+      }));
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+      setState(prev => ({
+        ...prev,
+        notifications: [],
+        unreadCount: 0,
+      }));
+    }
   }, []);
 
   const toggleOpen = useCallback(() => {

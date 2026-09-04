@@ -28,7 +28,12 @@ export async function POST(request: NextRequest) {
     const validated = createBrigadeSchema.parse(body);
 
     const brigade = await prisma.brigade.create({
-      data: validated,
+      data: {
+        name: validated.name,
+        leaderId: validated.leaderId,
+        memberIds: validated.memberIds,
+        ...(validated.skillIds.length > 0 && { skills: { connect: validated.skillIds.map((id) => ({ id })) } }),
+      },
       include: {
         employees: true,
         projects: true,

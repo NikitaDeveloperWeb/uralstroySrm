@@ -1,32 +1,16 @@
 import { create } from 'zustand';
 import type { UnitRate } from '@/shared/types/unitRate';
+import { apiFetch, createQueryUrl, ApiResponse } from '@/shared/lib/api-client';
 
 interface UnitRateStore {
-  // Данные
   unitRates: UnitRate[];
-  
-  // Состояние загрузки
   loading: boolean;
   error: string | null;
   
-  // Actions
-  fetchUnitRates: (category?: string, isActive?: boolean) => Promise<void>;
+  fetchUnitRates: (category?: string, targetType?: string, isActive?: boolean) => Promise<void>;
   createUnitRate: (data: Partial<UnitRate>) => Promise<void>;
   updateUnitRate: (id: number, data: Partial<UnitRate>) => Promise<void>;
   deleteUnitRate: (id: number) => Promise<void>;
-}
-
-async function apiFetch(url: string, options?: RequestInit) {
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `API error: ${res.status}`);
-  }
-  if (res.status === 204) return null;
-  return res.json();
 }
 
 export const useUnitRateStore = create<UnitRateStore>((set) => ({
@@ -34,36 +18,35 @@ export const useUnitRateStore = create<UnitRateStore>((set) => ({
   loading: false,
   error: null,
   
-  fetchUnitRates: async (category?: string, isActive?: boolean) => {
+  fetchUnitRates: async (category?: string, targetType?: string, isActive?: boolean) => {
     set({ loading: true, error: null });
     try {
-      let url = '/api/unit-rates';
-      const params = new URLSearchParams();
-      if (category) params.set('category', category);
-      if (isActive !== undefined) params.set('isActive', String(isActive));
-      if (params.toString()) url += `?${params.toString()}`;
+      const params: Record<string, string> = {};
+      if (category) params.category = category;
+      if (targetType) params.targetType = targetType;
+      if (isActive !== undefined) params.isActive = String(isActive);
       
-      const { data } = await apiFetch(url);
-      set({ unitRates: data as UnitRate[], loading: false, error: null });
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+      const { data } = await apiFetch<ApiResponse<UnitRate[]>>(createQueryUrl('/api/unit-rates', Object.keys(params).length ? params : undefined));
+      set({ unitRates: data ?? [], loading: false, error: null });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
     }
   },
   
   createUnitRate: async (data) => {
     set({ loading: true, error: null });
     try {
-      const { data: created } = await apiFetch('/api/unit-rates', {
+      const { data: created } = await apiFetch<ApiResponse<UnitRate>>('/api/unit-rates', {
         method: 'POST',
         body: JSON.stringify(data),
       });
       set((s) => ({
-        unitRates: [created as UnitRate, ...s.unitRates],
+        unitRates: [created!, ...s.unitRates],
         loading: false,
         error: null,
       }));
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
       throw e;
     }
   },
@@ -71,17 +54,17 @@ export const useUnitRateStore = create<UnitRateStore>((set) => ({
   updateUnitRate: async (id, data) => {
     set({ loading: true, error: null });
     try {
-      const { data: updated } = await apiFetch(`/api/unit-rates/${id}`, {
+      const { data: updated } = await apiFetch<ApiResponse<UnitRate>>(`/api/unit-rates/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
       set((s) => ({
-        unitRates: s.unitRates.map(r => r.id === id ? updated as UnitRate : r),
+        unitRates: s.unitRates.map(r => r.id === id ? updated! : r),
         loading: false,
         error: null,
       }));
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
       throw e;
     }
   },
@@ -95,8 +78,8 @@ export const useUnitRateStore = create<UnitRateStore>((set) => ({
         loading: false,
         error: null,
       }));
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
       throw e;
     }
   },

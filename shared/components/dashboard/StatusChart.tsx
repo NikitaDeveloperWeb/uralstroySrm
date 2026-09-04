@@ -10,8 +10,8 @@ const data = [
 
 export function StatusChart() {
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">Статус объектов</h2>
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-6">
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Статус объектов</h2>
       <div className="flex flex-col md:flex-row gap-8 items-center">
         <div className="h-64 w-full md:w-64">
           <ResponsiveContainer width="100%" height="100%">
@@ -49,8 +49,8 @@ export function StatusChart() {
           {data.map((item, index) => (
             <div key={index} className="flex items-center gap-3">
               <div className="w-4 h-4 rounded-full" style={{ backgroundColor: item.color }} />
-              <span className="text-sm font-medium text-gray-900">{item.name}</span>
-              <span className="text-sm text-gray-600 ml-auto">{item.value} объектов</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">{item.name}</span>
+              <span className="text-sm text-gray-600 dark:text-slate-300 ml-auto">{item.value} объектов</span>
             </div>
           ))}
         </div>

@@ -96,48 +96,48 @@ export function ReportsList({ reports, onDelete }: ReportsListProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-900">История отчетов</h2>
-        <span className="text-sm text-gray-500">
+        <h2 className="text-xl font-bold text-gray-900 dark:text-white dark:text-white">История отчетов</h2>
+        <span className="text-sm text-gray-500 dark:text-slate-400">
           {filteredReports.length} {filteredReports.length === 1 ? 'запись' : filteredReports.length < 5 ? 'записи' : 'записей'}
         </span>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
+      <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 dark:border-slate-700 p-4 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="relative lg:col-span-2">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-slate-500" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Поиск по описанию..."
-              className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:bg-slate-700 dark:text-white pl-9 pr-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
           <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-slate-500" />
             <input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               placeholder="С"
-              className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:bg-slate-700 dark:text-white pl-9 pr-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
           <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-slate-500" />
             <input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               placeholder="По"
-              className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:bg-slate-700 dark:text-white pl-9 pr-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-gray-500">Тип:</span>
+          <span className="text-xs text-gray-500 dark:text-slate-400">Тип:</span>
           {([
             { value: 'all' as const, label: 'Все' },
             { value: 'object' as const, label: 'По объекту' },
@@ -152,7 +152,7 @@ export function ReportsList({ reports, onDelete }: ReportsListProps) {
               className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
                 typeFilter === filter.value
                   ? 'bg-gray-900 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  : 'bg-gray-100 dark:bg-slate-700 dark:bg-slate-700 text-gray-600 dark:text-slate-300 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600'
               }`}
             >
               {filter.label}
@@ -174,33 +174,33 @@ export function ReportsList({ reports, onDelete }: ReportsListProps) {
       </div>
 
       {filteredReports.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-3">
-            <Search className="w-5 h-5 text-gray-400" />
+        <div className="text-center py-12 bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 dark:border-slate-700">
+          <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-slate-700 dark:bg-slate-700 flex items-center justify-center mx-auto mb-3">
+            <Search className="w-5 h-5 text-gray-400 dark:text-slate-500" />
           </div>
-          <p className="text-gray-500 text-sm">Отчеты не найдены</p>
-          <p className="text-gray-400 text-xs mt-1">
+          <p className="text-gray-500 dark:text-slate-400 text-sm dark:text-slate-400">Отчеты не найдены</p>
+          <p className="text-gray-400 dark:text-slate-500 text-xs mt-1 dark:text-slate-500">
             {activeFiltersCount > 0 ? 'Попробуйте изменить фильтры' : 'Создайте первый отчет'}
           </p>
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-xl border border-gray-200 dark:border-slate-700 dark:border-slate-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-gray-50 dark:bg-slate-700 dark:bg-slate-700 border-b border-gray-200 dark:border-slate-700 dark:border-slate-600">
                   <tr>
-                    <th className="text-left px-4 py-3 font-medium text-gray-700">Дата</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-700">Тип</th>
-                    <th className="text-left px-4 py-3 font-medium text-gray-700">Описание</th>
-                    <th className="text-right px-4 py-3 font-medium text-gray-700">Сумма</th>
-                    <th className="text-center px-4 py-3 font-medium text-gray-700 w-12">Действия</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700 dark:text-slate-300 dark:text-white">Дата</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700 dark:text-slate-300 dark:text-white">Тип</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700 dark:text-slate-300 dark:text-white">Описание</th>
+                    <th className="text-right px-4 py-3 font-medium text-gray-700 dark:text-slate-300 dark:text-white">Сумма</th>
+                    <th className="text-center px-4 py-3 font-medium text-gray-700 dark:text-slate-300 dark:text-white w-12">Действия</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-gray-100 dark:divide-slate-700 dark:divide-slate-700">
                   {filteredReports.map((report) => (
-                    <tr key={report.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-3 text-gray-900 whitespace-nowrap">
+                    <tr key={report.id} className="hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-700 transition-colors">
+                      <td className="px-4 py-3 text-gray-900 dark:text-white dark:text-white whitespace-nowrap">
                         {new Date(report.date).toLocaleDateString('ru-RU', {
                           day: '2-digit',
                           month: '2-digit',
@@ -213,16 +213,16 @@ export function ReportsList({ reports, onDelete }: ReportsListProps) {
                           {typeLabels[report.type]}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-gray-600 max-w-xs truncate">
+                      <td className="px-4 py-3 text-gray-600 dark:text-slate-300 dark:text-slate-300 max-w-xs truncate">
                         {report.description || '—'}
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-gray-900 whitespace-nowrap">
+                      <td className="px-4 py-3 text-right font-semibold text-gray-900 dark:text-white dark:text-white whitespace-nowrap">
                         {report.amount.toLocaleString('ru-RU')} ₽
                       </td>
                       <td className="px-4 py-3 text-center">
                         <button
                           onClick={() => onDelete(report.id)}
-                          className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                          className="p-1.5 text-gray-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -234,9 +234,9 @@ export function ReportsList({ reports, onDelete }: ReportsListProps) {
             </div>
           </div>
 
-          <div className="flex justify-between items-center bg-gray-50 rounded-xl px-5 py-3 border border-gray-200">
-            <span className="text-sm text-gray-600">Всего по фильтру:</span>
-            <span className="text-lg font-bold text-gray-900">{totalAmount.toLocaleString('ru-RU')} ₽</span>
+          <div className="flex justify-between items-center bg-gray-50 dark:bg-slate-700 dark:bg-slate-700 rounded-xl px-5 py-3 border border-gray-200 dark:border-slate-700 dark:border-slate-600">
+            <span className="text-sm text-gray-600 dark:text-slate-300 dark:text-slate-300">Всего по фильтру:</span>
+            <span className="text-lg font-bold text-gray-900 dark:text-white dark:text-white">{totalAmount.toLocaleString('ru-RU')} ₽</span>
           </div>
         </>
       )}

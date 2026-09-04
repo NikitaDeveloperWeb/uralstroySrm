@@ -1,16 +1,13 @@
 import { create } from 'zustand';
 import type { Employee, Brigade } from '@/shared/types/project';
+import { apiFetch, ApiResponse } from '@/shared/lib/api-client';
 
 interface EmployeeStore {
-  // Данные
   employees: Employee[];
   brigades: Brigade[];
-  
-  // Состояние загрузки
   loading: boolean;
   error: string | null;
   
-  // Actions
   fetchEmployees: () => Promise<void>;
   fetchBrigades: () => Promise<void>;
   createEmployee: (data: Partial<Employee>) => Promise<void>;
@@ -19,20 +16,6 @@ interface EmployeeStore {
   createBrigade: (data: Partial<Brigade>) => Promise<void>;
   updateBrigade: (id: number, data: Partial<Brigade>) => Promise<void>;
   deleteBrigade: (id: number) => Promise<void>;
-}
-
-async function apiFetch(url: string, options?: RequestInit) {
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `API error: ${res.status}`);
-  }
-  // DELETE возвращает 204 без тела
-  if (res.status === 204) return null;
-  return res.json();
 }
 
 export const useEmployeeStore = create<EmployeeStore>((set) => ({
@@ -44,37 +27,37 @@ export const useEmployeeStore = create<EmployeeStore>((set) => ({
   fetchEmployees: async () => {
     set({ loading: true, error: null });
     try {
-      const { data } = await apiFetch('/api/employees');
-      set({ employees: data as Employee[], loading: false, error: null });
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+      const { data } = await apiFetch<ApiResponse<Employee[]>>('/api/employees');
+      set({ employees: data ?? [], loading: false, error: null });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
     }
   },
   
   fetchBrigades: async () => {
     set({ loading: true, error: null });
     try {
-      const { data } = await apiFetch('/api/brigades');
-      set({ brigades: data as Brigade[], loading: false, error: null });
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+      const { data } = await apiFetch<ApiResponse<Brigade[]>>('/api/brigades');
+      set({ brigades: data ?? [], loading: false, error: null });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
     }
   },
   
   createEmployee: async (data) => {
     set({ loading: true, error: null });
     try {
-      const { data: created } = await apiFetch('/api/employees', {
+      const { data: created } = await apiFetch<ApiResponse<Employee>>('/api/employees', {
         method: 'POST',
         body: JSON.stringify(data),
       });
       set((s) => ({
-        employees: [created as Employee, ...s.employees],
+        employees: [created!, ...s.employees],
         loading: false,
         error: null,
       }));
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
       throw e;
     }
   },
@@ -82,17 +65,17 @@ export const useEmployeeStore = create<EmployeeStore>((set) => ({
   updateEmployee: async (id, data) => {
     set({ loading: true, error: null });
     try {
-      const { data: updated } = await apiFetch(`/api/employees/${id}`, {
+      const { data: updated } = await apiFetch<ApiResponse<Employee>>(`/api/employees/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
       set((s) => ({
-        employees: s.employees.map(e => e.id === id ? updated as Employee : e),
+        employees: s.employees.map(e => e.id === id ? updated! : e),
         loading: false,
         error: null,
       }));
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
       throw e;
     }
   },
@@ -106,8 +89,8 @@ export const useEmployeeStore = create<EmployeeStore>((set) => ({
         loading: false,
         error: null,
       }));
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
       throw e;
     }
   },
@@ -115,17 +98,17 @@ export const useEmployeeStore = create<EmployeeStore>((set) => ({
   createBrigade: async (data) => {
     set({ loading: true, error: null });
     try {
-      const { data: created } = await apiFetch('/api/brigades', {
+      const { data: created } = await apiFetch<ApiResponse<Brigade>>('/api/brigades', {
         method: 'POST',
         body: JSON.stringify(data),
       });
       set((s) => ({
-        brigades: [created as Brigade, ...s.brigades],
+        brigades: [created!, ...s.brigades],
         loading: false,
         error: null,
       }));
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
       throw e;
     }
   },
@@ -133,17 +116,17 @@ export const useEmployeeStore = create<EmployeeStore>((set) => ({
   updateBrigade: async (id, data) => {
     set({ loading: true, error: null });
     try {
-      const { data: updated } = await apiFetch(`/api/brigades/${id}`, {
+      const { data: updated } = await apiFetch<ApiResponse<Brigade>>(`/api/brigades/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
       set((s) => ({
-        brigades: s.brigades.map(b => b.id === id ? updated as Brigade : b),
+        brigades: s.brigades.map(b => b.id === id ? updated! : b),
         loading: false,
         error: null,
       }));
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
       throw e;
     }
   },
@@ -157,8 +140,8 @@ export const useEmployeeStore = create<EmployeeStore>((set) => ({
         loading: false,
         error: null,
       }));
-    } catch (e: any) {
-      set({ error: e.message, loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message, loading: false });
       throw e;
     }
   },

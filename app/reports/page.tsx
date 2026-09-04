@@ -1,56 +1,53 @@
 'use client';
 
-import { useState } from 'react';
-import { Wrench, HardHat, Truck, FileText, Trash2, Calendar, Search, Download } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Wrench, FileText, Trash2, Calendar, Search, Download, Loader2, X } from 'lucide-react';
 import { Modal } from '@/shared/components/ui/Modal';
+import { Pagination } from '@/shared/components/ui/Pagination';
+import { useAlert } from '@/shared/hooks/useAlert';
 import { exportReportsToPDF, exportSingleReportToPDF } from '@/shared/lib/pdfExport';
+import { fetchShopReports, createShopReport, fetchEmployeesWithSdelnaya, fetchUnitRatesForEmployee } from '@/shared/lib/shop-reports-api';
+import * as XLSX from 'xlsx';
 
-const shopEmployees = [
-  { id: 1, fullName: 'Иванов Иван Иванович', workplace: 'цех', paymentType: 'сменная' },
-  { id: 3, fullName: 'Сидоров Алексей Дмитриевич', workplace: 'цех', paymentType: 'сдельная' },
-  { id: 5, fullName: 'Морозова Анна Владимировна', workplace: 'цех', paymentType: 'сдельная' },
-  { id: 7, fullName: 'Волкова Елена Игоревна', workplace: 'цех', paymentType: 'сменная' },
-];
+interface Employee {
+  id: number;
+  fullName: string;
+  workplace?: string;
+  paymentType?: string;
+}
 
-const workTypeRates: Record<string, number> = {
-  сосна: 350,
-  липа: 400,
-  утепление: 400,
-  каркасы: 1000,
-  стропила: 900,
-  обшивкаСтропил: 300,
-};
+interface UnitRate {
+  id: number;
+  name: string;
+  pricePerUnit: number;
+  category?: string;
+}
 
-const dailyRate = 2000;
+interface ShopReportItem {
+  id?: number;
+  workTypeId?: number;
+  workName: string;
+  quantity: number;
+  rate: number;
+  amount: number;
+}
 
-const reportCards = [
-  {
-    id: 'цех',
-    title: 'Отчет цеха',
-    description: 'Отчет о работе цеха за период',
-    icon: Wrench,
-    color: 'bg-blue-500',
-    hoverColor: 'hover:bg-blue-50',
-  },
-  {
-    id: 'монтаж',
-    title: 'Отчет монтажа',
-    description: 'Отчет о монтажных работах за период',
-    icon: HardHat,
-    color: 'bg-purple-500',
-    hoverColor: 'hover:bg-purple-50',
-  },
-  {
-    id: 'склад',
-    title: 'Отчет складлера',
-    description: 'Отчет о складских операциях за период',
-    icon: Truck,
-    color: 'bg-green-500',
-    hoverColor: 'hover:bg-green-50',
-  },
-];
+interface ShopReport {
+  id: number;
+  employeeId: number;
+  employee: Employee;
+  projectId: number | null;
+  project: { id: number; name: string } | null;
+  date: string;
+  periodFrom: string;
+  periodTo: string;
+  comment: string | null;
+  items: ShopReportItem[];
+  totalAmount: number;
+  createdAt: string;
+}
 
-export interface ReportEntry {
+interface ReportEntry {
   id: number;
   type: string;
   date: string;
@@ -72,43 +69,44 @@ export interface ReportEntry {
     обшивкаСтропил: number;
   };
   createdAt: string;
+  totalAmount?: number;
+  items?: Array<{
+    id?: number;
+    workName: string;
+    quantity: number;
+    rate: number;
+    amount: number;
+  }>;
 }
 
-const initialReports: ReportEntry[] = [
+const reportCards = [
   {
-    id: 1,
-    type: 'цех',
-    date: '2026-07-29',
-    periodStart: '2026-07-29',
-    periodEnd: '2026-07-29',
-    workDone: 'Изготовление каркасов для 3 бань',
-    materials: 'Доска 50x150мм - 2м³, брус 150x150мм - 0.5м³',
-    notes: 'Работа выполнена в срок',
-    employeeId: 1,
-    employeeName: 'Иванов Иван Иванович',
-    employeePaymentType: 'сменная',
-    hours: 8,
-    squareMeters: { сосна: 45, липа: 20, утепление: 35, каркасы: 60, стропила: 0, обшивкаСтропил: 0 },
-    createdAt: '2026-07-29T17:00:00',
-  },
-  {
-    id: 2,
-    type: 'монтаж',
-    date: '2026-07-29',
-    periodStart: '2026-07-29',
-    periodEnd: '2026-07-29',
-    workDone: 'Монтаж фундамента на объекте "Дом Петров"',
-    materials: 'Бетон М300 - 15м³, арматура 12мм - 200кг',
-    notes: '',
-    squareMeters: { сосна: 0, липа: 0, утепление: 0, каркасы: 0, стропила: 0, обшивкаСтропил: 0 },
-    createdAt: '2026-07-29T16:30:00',
+    id: 'цех',
+    title: 'Отчет цеха',
+    description: 'Отчет о работе цеха за период',
+    icon: Wrench,
+    color: 'bg-blue-500',
+    hoverColor: 'hover:bg-blue-50',
   },
 ];
 
+const typeLabels: Record<string, string> = {
+  цех: 'Отчет цеха',
+};
+
+const typeColors: Record<string, string> = {
+  цех: 'bg-blue-100 text-blue-800',
+};
+
 export default function ReportsPage() {
-  const [reports, setReports] = useState<ReportEntry[]>(initialReports);
+  const [reports, setReports] = useState<ReportEntry[]>([]);
+  const [shopReports, setShopReports] = useState<ShopReport[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [unitRates, setUnitRates] = useState<UnitRate[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedReportType, setSelectedReportType] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     periodStart: new Date().toISOString().split('T')[0],
@@ -117,24 +115,74 @@ export default function ReportsPage() {
     materials: '',
     notes: '',
     employeeId: '' as number | '',
-    hours: 8,
+    projectId: '' as number | '',
   });
-  const [squareMeters, setSquareMeters] = useState({
-    сосна: 0,
-    липа: 0,
-    утепление: 0,
-    каркасы: 0,
-    стропила: 0,
-    обшивкаСтропил: 0,
-  });
+  const [reportItems, setReportItems] = useState<ShopReportItem[]>([]);
   const [filterDate, setFilterDate] = useState('');
   const [filterName, setFilterName] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const REPORTS_PER_PAGE = 10;
+  const [isExporting, setIsExporting] = useState(false);
+  const { alert, confirm } = useAlert();
 
-  const filteredReports = reports.filter(r => {
-    const matchesDate = !filterDate || r.date === filterDate;
-    const matchesName = !filterName || (r.employeeName && r.employeeName.toLowerCase().includes(filterName.toLowerCase()));
-    return matchesDate && matchesName;
-  });
+  useEffect(() => {
+    loadReports();
+    loadEmployees();
+    loadUnitRates();
+  }, []);
+
+  const loadReports = async () => {
+    try {
+      const data = await fetchShopReports();
+      setShopReports(data);
+      const converted = data.map((r: ShopReport) => ({
+        id: r.id,
+        type: 'цех',
+        date: new Date(r.date).toISOString().split('T')[0],
+        periodStart: new Date(r.periodFrom).toISOString().split('T')[0],
+        periodEnd: new Date(r.periodTo).toISOString().split('T')[0],
+        workDone: r.comment || '',
+        materials: '',
+        notes: '',
+        employeeId: r.employeeId,
+        employeeName: r.employee.fullName,
+        employeePaymentType: r.employee.paymentType,
+        squareMeters: {
+          сосна: 0,
+          липа: 0,
+          утепление: 0,
+          каркасы: 0,
+          стропила: 0,
+          обшивкаСтропил: 0,
+        },
+        createdAt: r.createdAt,
+        totalAmount: r.totalAmount,
+      }));
+      setReports(converted);
+    } catch (error) {
+      console.error('Error loading reports:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadEmployees = async () => {
+    try {
+      const data = await fetchEmployeesWithSdelnaya();
+      setEmployees(data);
+    } catch (error) {
+      console.error('Error loading employees:', error);
+    }
+  };
+
+  const loadUnitRates = async () => {
+    try {
+      const data = await fetchUnitRatesForEmployee();
+      setUnitRates(data);
+    } catch (error) {
+      console.error('Error loading unit rates:', error);
+    }
+  };
 
   const handleOpenModal = (type: string) => {
     setSelectedReportType(type);
@@ -146,86 +194,132 @@ export default function ReportsPage() {
       materials: '',
       notes: '',
       employeeId: '',
-      hours: 8,
+      projectId: '',
     });
-    setSquareMeters({
-      сосна: 0,
-      липа: 0,
-      утепление: 0,
-      каркасы: 0,
-      стропила: 0,
-      обшивкаСтропил: 0,
-    });
+    setReportItems([]);
     setIsModalOpen(true);
   };
 
-  const handleSave = () => {
-    const typeMap: Record<string, string> = {
-      цех: 'цех',
-      монтаж: 'монтаж',
-      склад: 'склад',
-    };
-    const newId = Math.max(...reports.map(r => r.id), 0) + 1;
-    const selectedEmployee = formData.employeeId ? shopEmployees.find(e => e.id === formData.employeeId) : undefined;
-    const newReport: ReportEntry = {
-      ...formData,
-      id: newId,
-      type: typeMap[selectedReportType] || selectedReportType,
-      createdAt: new Date().toISOString(),
-      squareMeters: selectedReportType === 'цех' ? squareMeters : { сосна: 0, липа: 0, утепление: 0, каркасы: 0, стропила: 0, обшивкаСтропил: 0 },
-      employeeId: selectedReportType === 'цех' && formData.employeeId ? formData.employeeId : undefined,
-      employeeName: selectedReportType === 'цех' ? selectedEmployee?.fullName : undefined,
-      employeePaymentType: selectedReportType === 'цех' ? selectedEmployee?.paymentType : undefined,
-      hours: selectedReportType === 'цех' ? formData.hours : undefined,
-    };
-    setReports(prev => [newReport, ...prev]);
-    setIsModalOpen(false);
-    setSelectedReportType('');
+  const addReportItem = () => {
+    setReportItems(prev => [...prev, { workName: '', quantity: 0, rate: 0, amount: 0 }]);
   };
 
-  const handleDelete = (id: number) => {
-    setReports(prev => prev.filter(r => r.id !== id));
+  const removeReportItem = (index: number) => {
+    setReportItems(prev => prev.filter((_, i) => i !== index));
   };
 
-  const calculateEarnings = (report: ReportEntry) => {
-    if (report.type !== 'цех') return 0;
-    if (report.employeePaymentType === 'сдельная') {
-      let total = 0;
-      for (const [key, value] of Object.entries(report.squareMeters)) {
-        total += value * (workTypeRates[key] || 0);
+  const updateReportItem = (index: number, field: keyof ShopReportItem, value: string | number) => {
+    setReportItems(prev => prev.map((item, i) => {
+      if (i !== index) return item;
+      const updated = { ...item, [field]: value };
+      if (field === 'quantity' || field === 'rate') {
+        updated.amount = Math.round(updated.quantity * updated.rate * 100) / 100;
       }
-      return total;
-    }
-    if (report.employeePaymentType === 'сменная' && report.hours) {
-      return report.hours * dailyRate;
-    }
-    return 0;
+      return updated;
+    }));
   };
 
-  const typeLabels: Record<string, string> = {
-    цех: 'Отчет цеха',
-    монтаж: 'Отчет монтажа',
-    склад: 'Отчет складлера',
+  const handleSave = async () => {
+    if (selectedReportType !== 'цех') return;
+    if (!formData.employeeId) {
+      alert('Выберите сотрудника');
+      return;
+    }
+    if (reportItems.length === 0) {
+      alert('Добавьте хотя бы одну работу');
+      return;
+    }
+    if (reportItems.some(item => item.amount <= 0 || item.quantity <= 0 || item.rate <= 0)) {
+      alert('Проверьте корректность данных');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await createShopReport({
+        employeeId: formData.employeeId as number,
+        projectId: formData.projectId ? Number(formData.projectId) : undefined,
+        date: formData.date,
+        periodFrom: formData.periodStart,
+        periodTo: formData.periodEnd,
+        comment: formData.workDone,
+        items: reportItems,
+      });
+      await loadReports();
+      setIsModalOpen(false);
+      setSelectedReportType('');
+    } catch (error: any) {
+      alert(error.message || 'Ошибка при сохранении');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const typeColors: Record<string, string> = {
-    цех: 'bg-blue-100 text-blue-800',
-    монтаж: 'bg-purple-100 text-purple-800',
-    склад: 'bg-green-100 text-green-800',
+  const handleExportExcel = () => {
+    const wb = XLSX.utils.book_new();
+    const rows: string[][] = [
+      ['Отчеты цеха'],
+      ['#', 'Сотрудник', 'Период с', 'Период по', 'Дата', 'Выполненные работы', 'Заработок'],
+    ];
+    filteredReports.forEach((report, i) => {
+      rows.push([
+        String(i + 1),
+        report.employeeName || '—',
+        new Date(report.periodStart).toLocaleDateString('ru-RU'),
+        new Date(report.periodEnd).toLocaleDateString('ru-RU'),
+        new Date(report.date).toLocaleDateString('ru-RU'),
+        report.workDone || '—',
+        report.totalAmount ? report.totalAmount.toLocaleString('ru-RU') + ' ₽' : '—',
+      ]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 5 }, { wch: 30 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 40 }, { wch: 15 }];
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    const borderStyle = { style: 'thin', color: { rgb: '000000' } };
+    for (let R = range.s.r; R <= range.e.r; R++) {
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[addr]) continue;
+        if (!ws[addr].s) ws[addr].s = {};
+        ws[addr].s.border = { top: borderStyle, bottom: borderStyle, left: borderStyle, right: borderStyle };
+        if (R === 1) ws[addr].s.font = { bold: true };
+        if (R === 0) ws[addr].s.font = { bold: true, sz: 14 };
+      }
+    }
+    XLSX.utils.book_append_sheet(wb, ws, 'Отчеты');
+    XLSX.writeFile(wb, 'отчеты_' + new Date().toISOString().split('T')[0] + '.xlsx');
   };
+
+  const handleDelete = async (id: number) => {
+    if (!(await confirm('Удалить отчет?'))) return;
+    try {
+      await fetch(`/api/shop-reports/${id}`, { method: 'DELETE' });
+      setReports(prev => prev.filter(r => r.id !== id));
+    } catch (error) {
+      console.error('Error deleting report:', error);
+    }
+  };
+
+  const filteredReports = reports.filter(r => {
+    const matchesDate = !filterDate || r.date === filterDate;
+    const matchesName = !filterName || (r.employeeName && r.employeeName.toLowerCase().includes(filterName.toLowerCase()));
+    return matchesDate && matchesName;
+  });
+
+  const totalPages = Math.ceil(filteredReports.length / REPORTS_PER_PAGE) || 1;
+  const paginatedReports = filteredReports.slice(
+    (currentPage - 1) * REPORTS_PER_PAGE,
+    currentPage * REPORTS_PER_PAGE,
+  );
 
   const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'цех': return <Wrench className="w-4 h-4" />;
-      case 'монтаж': return <HardHat className="w-4 h-4" />;
-      case 'склад': return <Truck className="w-4 h-4" />;
-      default: return <FileText className="w-4 h-4" />;
-    }
+    if (type === 'цех') return <Wrench className="w-4 h-4" />;
+    return <FileText className="w-4 h-4" />;
   };
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold text-gray-900">Отчеты</h1>
+      <h1 className="text-3xl font-bold text-gray-900 dark:text-white dark:text-white dark:text-white">Отчеты</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {reportCards.map((card) => {
@@ -234,13 +328,13 @@ export default function ReportsPage() {
             <button
               key={card.id}
               onClick={() => handleOpenModal(card.id)}
-              className={`${card.hoverColor} bg-white rounded-lg shadow-md p-8 text-left transition-all hover:shadow-lg`}
+              className={`${card.hoverColor} bg-white dark:bg-slate-800 dark:bg-slate-800 dark:bg-slate-800 rounded-lg shadow-md p-8 text-left transition-all hover:shadow-lg border border-gray-100 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700`}
             >
               <div className={`w-16 h-16 ${card.color} rounded-lg flex items-center justify-center mb-4`}>
                 <Icon className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">{card.title}</h3>
-              <p className="text-gray-600">{card.description}</p>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white dark:text-white dark:text-white mb-2">{card.title}</h3>
+              <p className="text-gray-600 dark:text-slate-300 dark:text-slate-300 dark:text-slate-400">{card.description}</p>
             </button>
           );
         })}
@@ -249,72 +343,99 @@ export default function ReportsPage() {
       <div className="flex gap-4 items-center">
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Calendar className="w-5 h-5 text-gray-400" />
+            <Calendar className="w-5 h-5 text-gray-400 dark:text-slate-500 dark:text-slate-500" />
           </div>
           <input
             type="date"
             value={filterDate}
             onChange={(e) => setFilterDate(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] text-gray-900"
+            className="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] text-gray-900 dark:text-white dark:text-white dark:bg-slate-700 dark:text-white"
             placeholder="Фильтр по дате"
           />
         </div>
         <div className="relative flex-1">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-            <Search className="w-5 h-5 text-gray-400" />
+            <Search className="w-5 h-5 text-gray-400 dark:text-slate-500 dark:text-slate-500" />
           </div>
           <input
             type="text"
             placeholder="Поиск по ФИО сотрудника..."
             value={filterName}
             onChange={(e) => setFilterName(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] text-gray-900"
+            className="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] text-gray-900 dark:text-white dark:text-white dark:bg-slate-700 dark:text-white"
           />
         </div>
         {filteredReports.length > 0 && (
           <button
-            onClick={() => exportReportsToPDF(filteredReports)}
-            className="flex items-center gap-2 bg-[#1976d2] hover:bg-[#1565c0] text-white font-semibold px-4 py-3 rounded-lg transition-colors whitespace-nowrap"
+            onClick={handleExportExcel}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-3 rounded-lg transition-colors whitespace-nowrap"
           >
-            <Download className="w-4 h-4" />
-            Экспорт PDF
+            <FileText className="w-4 h-4" />
+            Экспорт в Excel
           </button>
         )}
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 dark:bg-slate-800 rounded-lg shadow-md p-6">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Последние отчеты</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white dark:text-white dark:text-white">Последние отчеты</h2>
           {filteredReports.length > 0 && (
-            <span className="text-sm text-gray-500">Всего: {filteredReports.length}</span>
+            <span className="text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400 dark:text-slate-400">Всего: {filteredReports.length}</span>
           )}
         </div>
-        {filteredReports.length === 0 ? (
+        {loading ? (
           <div className="text-center py-12">
-            <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-500 text-lg">Отчеты не найдены</p>
+            <Loader2 className="w-12 h-12 text-gray-400 dark:text-slate-500 dark:text-slate-500 mx-auto mb-4 animate-spin" />
+            <p className="text-gray-500 dark:text-slate-400 dark:text-slate-400 dark:text-slate-400 text-lg">Загрузка...</p>
+          </div>
+        ) : paginatedReports.length === 0 ? (
+          <div className="text-center py-12">
+            <FileText className="w-12 h-12 text-gray-400 dark:text-slate-500 dark:text-slate-500 mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-slate-400 dark:text-slate-400 dark:text-slate-400 text-lg">Отчеты не найдены</p>
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredReports.map((report) => (
-              <div key={report.id} className="p-6 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+            {paginatedReports.map((report) => (
+              <div key={report.id} className="p-6 bg-gray-50 dark:bg-slate-700 dark:bg-slate-700 dark:bg-slate-750 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600 dark:bg-slate-700 dark:hover:bg-slate-700 transition-colors">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-lg ${typeColors[report.type] || 'bg-gray-100 text-gray-800'}`}>
+                    <div className={`p-2 rounded-lg ${typeColors[report.type] || 'bg-gray-100 dark:bg-slate-700 dark:bg-slate-700 text-gray-800 dark:text-slate-200 dark:text-slate-200'}`}>
                       {getTypeIcon(report.type)}
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-900">{typeLabels[report.type] || report.type}</p>
-                      <p className="text-sm text-gray-500">{new Date(report.createdAt).toLocaleDateString('ru-RU')} в {new Date(report.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</p>
+                      <p className="font-semibold text-gray-900 dark:text-white dark:text-white dark:text-white">{typeLabels[report.type] || report.type}</p>
+                      <p className="text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400 dark:text-slate-400">{new Date(report.createdAt).toLocaleDateString('ru-RU')} в {new Date(report.createdAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <button
-                      onClick={() => exportSingleReportToPDF(report)}
-                      className="text-blue-600 hover:text-blue-800 transition-colors p-2 hover:bg-blue-50 rounded-lg"
-                      title="Экспорт в PDF"
+                      onClick={() => {
+                        const wb = XLSX.utils.book_new();
+                        const rows: string[][] = [
+                          ['Отчет цеха'],
+                          ['Сотрудник', report.employeeName || '—'],
+                          ['Период', new Date(report.periodStart).toLocaleDateString('ru-RU') + ' - ' + new Date(report.periodEnd).toLocaleDateString('ru-RU')],
+                          ['Дата', new Date(report.date).toLocaleDateString('ru-RU')],
+                          ['Выполненные работы', report.workDone || '—'],
+                          ['Заработок', report.totalAmount ? report.totalAmount.toLocaleString('ru-RU') + ' ₽' : '—'],
+                        ];
+                        if (report.items && report.items.length > 0) {
+                          rows.push([]);
+                          rows.push(['Детализация работ']);
+                          rows.push(['Работа', 'м²', 'Ставка', 'Сумма']);
+                          report.items.forEach(item => {
+                            rows.push([item.workName, String(item.quantity), item.rate.toLocaleString('ru-RU') + ' ₽', item.amount.toLocaleString('ru-RU') + ' ₽']);
+                          });
+                        }
+                        const ws = XLSX.utils.aoa_to_sheet(rows);
+                        ws['!cols'] = [{ wch: 30 }, { wch: 40 }];
+                        XLSX.utils.book_append_sheet(wb, ws, 'Отчет #' + report.id);
+                        XLSX.writeFile(wb, 'отчет_' + report.id + '_' + report.date + '.xlsx');
+                      }}
+                      className="text-green-600 hover:text-green-800 transition-colors p-2 hover:bg-green-50 rounded-lg"
+                      title="Экспорт в Excel"
                     >
-                      <Download className="w-4 h-4" />
+                      <FileText className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => handleDelete(report.id)}
@@ -327,218 +448,255 @@ export default function ReportsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">Период</p>
-                    <p className="text-gray-900">
+                    <p className="text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400 mb-1">Период</p>
+                    <p className="text-gray-900 dark:text-white dark:text-white">
                       {new Date(report.periodStart).toLocaleDateString('ru-RU')} - {new Date(report.periodEnd).toLocaleDateString('ru-RU')}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">Дата составления</p>
-                    <p className="text-gray-900">{new Date(report.date).toLocaleDateString('ru-RU')}</p>
+                    <p className="text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400 mb-1">Дата составления</p>
+                    <p className="text-gray-900 dark:text-white dark:text-white">{new Date(report.date).toLocaleDateString('ru-RU')}</p>
                   </div>
                 </div>
                 {(report.type === 'цех' && report.employeeName) && (
-                  <div className="mb-3">
-                    <p className="text-sm text-gray-500 mb-1">Сотрудник</p>
-                    <p className="text-gray-900">{report.employeeName}</p>
-                  </div>
-                )}
-                {report.type === 'цех' && (report.squareMeters.сосна || report.squareMeters.липа || report.squareMeters.утепление || report.squareMeters.каркасы || report.squareMeters.стропила || report.squareMeters.обшивкаСтропил) && (
-                  <div className="mb-3">
-                    <p className="text-sm text-gray-500 mb-1">Квадратура (м²)</p>
-                    <div className="grid grid-cols-3 gap-2">
-                      {report.squareMeters.сосна > 0 && <div className="bg-blue-50 px-3 py-1 rounded"><span className="text-xs text-gray-500">Сосна:</span> <span className="font-medium">{report.squareMeters.сосна} м²</span></div>}
-                      {report.squareMeters.липа > 0 && <div className="bg-amber-50 px-3 py-1 rounded"><span className="text-xs text-gray-500">Липа:</span> <span className="font-medium">{report.squareMeters.липа} м²</span></div>}
-                      {report.squareMeters.утепление > 0 && <div className="bg-green-50 px-3 py-1 rounded"><span className="text-xs text-gray-500">Утепление:</span> <span className="font-medium">{report.squareMeters.утепление} м²</span></div>}
-                      {report.squareMeters.каркасы > 0 && <div className="bg-purple-50 px-3 py-1 rounded"><span className="text-xs text-gray-500">Каркасы:</span> <span className="font-medium">{report.squareMeters.каркасы} м²</span></div>}
-                      {report.squareMeters.стропила > 0 && <div className="bg-orange-50 px-3 py-1 rounded"><span className="text-xs text-gray-500">Стропила:</span> <span className="font-medium">{report.squareMeters.стропила} м²</span></div>}
-                      {report.squareMeters.обшивкаСтропил > 0 && <div className="bg-teal-50 px-3 py-1 rounded"><span className="text-xs text-gray-500">Обшивка стропил:</span> <span className="font-medium">{report.squareMeters.обшивкаСтропил} м²</span></div>}
-                    </div>
-                  </div>
-                )}
-                {report.type === 'цех' && (() => {
-                  const earnings = calculateEarnings(report);
-                  if (earnings > 0) {
-                    return (
-                      <div className="mb-3">
-                        <p className="text-sm text-gray-500 mb-1">Заработок</p>
-                        <p className="text-lg font-bold text-green-600">{earnings.toLocaleString('ru-RU')} ₽</p>
-                        <p className="text-xs text-gray-400">
-                          {report.employeePaymentType === 'сдельная' ? 'сдельная оплата' : `сменная оплата (${report.hours} ч × ${dailyRate} ₽/ч)`}
-                        </p>
+                            <div className="mb-3">
+                                <p className="text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400 mb-1">Сотрудник</p>
+                                <p className="text-gray-900 dark:text-white dark:text-white">{report.employeeName}</p>
+                              </div>
+                            )}
+                            {report.totalAmount && (
+                              <div className="mb-3">
+                                <p className="text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400 mb-1">Заработок</p>
+                                <p className="text-lg font-bold text-green-600">{report.totalAmount.toLocaleString('ru-RU')} ₽</p>
+                              </div>
+                            )}
+                            <div className="mb-3">
+                              <p className="text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400 mb-1">Выполненные работы</p>
+                              <p className="text-gray-900 dark:text-white dark:text-white">{report.workDone}</p>
+                            </div>
+                            {report.items && report.items.length > 0 && (
+                              <div className="mb-3">
+                                <p className="text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400 mb-1">Детализация работ</p>
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-sm">
+                                    <thead>
+                                      <tr className="border-b border-gray-200 dark:border-slate-700 dark:border-slate-700">
+                                        <th className="text-left py-2 text-gray-500 dark:text-slate-400 dark:text-slate-400">Работа</th>
+                                        <th className="text-right py-2 text-gray-500 dark:text-slate-400 dark:text-slate-400">м²</th>
+                                        <th className="text-right py-2 text-gray-500 dark:text-slate-400 dark:text-slate-400">Ставка</th>
+                                        <th className="text-right py-2 text-gray-500 dark:text-slate-400 dark:text-slate-400">Сумма</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {report.items.map((item, idx) => (
+                                        <tr key={item.id ?? idx} className="border-b border-gray-100 dark:border-slate-700 dark:border-slate-700">
+                                          <td className="py-1">{item.workName}</td>
+                                          <td className="text-right py-1">{item.quantity}</td>
+                                          <td className="text-right py-1">{item.rate.toLocaleString('ru-RU')} ₽</td>
+                                          <td className="text-right py-1 font-medium">{item.amount.toLocaleString('ru-RU')} ₽</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    );
-                  }
-                  return null;
-                })()}
-                <div className="mb-3">
-                  <p className="text-sm text-gray-500 mb-1">Выполненные работы</p>
-                  <p className="text-gray-900">{report.workDone}</p>
-                </div>
-                {report.materials && (
-                  <div className="mb-3">
-                    <p className="text-sm text-gray-500 mb-1">Материалы</p>
-                    <p className="text-gray-900">{report.materials}</p>
+                    )}
                   </div>
-                )}
-                {report.notes && (
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Примечания</p>
-                    <p className="text-gray-900">{report.notes}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => { setIsModalOpen(false); setSelectedReportType(''); }}
-        title={`Создать ${typeLabels[selectedReportType] || 'отчет'}`}
-      >
-        <div className="space-y-4">
-          {selectedReportType === 'цех' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Сотрудник цеха</label>
-              <select
-                value={formData.employeeId}
-                onChange={e => setFormData(prev => ({ ...prev, employeeId: Number(e.target.value) }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
-              >
-                <option value="">Выберите сотрудника</option>
-                {shopEmployees.map(emp => (
-                  <option key={emp.id} value={emp.id}>{emp.fullName}</option>
-                ))}
-              </select>
-            </div>
-          )}
-          {selectedReportType === 'цех' && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Квадратура по видам работ (м²)</label>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { key: 'сосна', label: 'Сосна' },
-                  { key: 'липа', label: 'Липа' },
-                  { key: 'утепление', label: 'Утепление' },
-                  { key: 'каркасы', label: 'Каркасы' },
-                  { key: 'стропила', label: 'Стропила' },
-                  { key: 'обшивкаСтропил', label: 'Обшивка стропил' },
-                ].map(({ key, label }) => (
-                  <div key={key}>
-                    <label className="block text-xs text-gray-500 mb-1">{label}</label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      value={squareMeters[key as keyof typeof squareMeters] || ''}
-                      onChange={e => setSquareMeters(prev => ({
-                        ...prev,
-                        [key]: Number(e.target.value) || 0
-                      }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
-                      placeholder="0"
+                  {filteredReports.length > 0 && (
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                      totalItems={filteredReports.length}
+                      itemsPerPage={REPORTS_PER_PAGE}
                     />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {selectedReportType === 'цех' && (() => {
-            const selectedEmp = shopEmployees.find(e => e.id === formData.employeeId);
-            if (selectedEmp?.paymentType === 'сменная') {
-              return (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Количество часов</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="24"
-                    value={formData.hours || 8}
-                    onChange={e => setFormData(prev => ({ ...prev, hours: Number(e.target.value) }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
-                  />
+                  )}
+
+                  <Modal
+                    isOpen={isModalOpen}
+                    onClose={() => { setIsModalOpen(false); setSelectedReportType(''); }}
+                    title={`Создать ${typeLabels[selectedReportType] || 'отчет'}`}
+                  >
+                    <div className="space-y-4">
+                      {selectedReportType === 'цех' && (
+                        <>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Сотрудник цеха</label>
+                            <select
+                              value={formData.employeeId}
+                              onChange={e => setFormData(prev => ({ ...prev, employeeId: Number(e.target.value) }))}
+                              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                            >
+                              <option value="">Выберите сотрудника</option>
+                              {employees.map(emp => (
+                                <option key={emp.id} value={emp.id}>{emp.fullName}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300">Виды работ</label>
+                              <button
+                                type="button"
+                                onClick={addReportItem}
+                                className="text-sm text-[#1976d2] hover:text-[#1565c0] font-medium"
+                              >
+                                + Добавить работу
+                              </button>
+                            </div>
+                            <div className="space-y-3">
+                              {reportItems.map((item, index) => (
+                                <div key={index} className="p-3 bg-gray-50 dark:bg-slate-700 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-700 dark:border-slate-700">
+                                  <div className="flex justify-between mb-2">
+                                    <span className="text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300">Работа #{index + 1}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => removeReportItem(index)}
+                                      className="text-red-500 hover:text-red-700"
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <select
+                                      value=""
+                                      onChange={e => {
+                                        const rate = unitRates.find(r => r.id === Number(e.target.value));
+                                        if (rate) {
+                                          updateReportItem(index, 'workName', rate.name);
+                                          updateReportItem(index, 'rate', rate.pricePerUnit);
+                                        }
+                                      }}
+                                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
+                                    >
+                                      <option value="">Выберите из расценок</option>
+                                      {unitRates.map(r => (
+                                        <option key={r.id} value={r.id}>{r.name} ({r.pricePerUnit} ₽/м²)</option>
+                                      ))}
+                                    </select>
+                                    <input
+                                      type="text"
+                                      placeholder="Название работы"
+                                      value={item.workName}
+                                      onChange={e => updateReportItem(index, 'workName', e.target.value)}
+                                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
+                                    />
+                                    <div className="grid grid-cols-3 gap-2">
+                                      <div>
+                                        <label className="block text-xs text-gray-500 dark:text-slate-400 dark:text-slate-400 mb-1">м²</label>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="0.1"
+                                          value={item.quantity || ''}
+                                          onChange={e => updateReportItem(index, 'quantity', Number(e.target.value))}
+                                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
+                                          placeholder="0"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs text-gray-500 dark:text-slate-400 dark:text-slate-400 mb-1">Ставка ₽/м²</label>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="1"
+                                          value={item.rate || ''}
+                                          onChange={e => updateReportItem(index, 'rate', Number(e.target.value))}
+                                          className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
+                                          placeholder="0"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs text-gray-500 dark:text-slate-400 dark:text-slate-400 mb-1">Сумма ₽</label>
+                                        <div className="px-3 py-2 bg-gray-100 dark:bg-slate-700 dark:bg-slate-700 rounded-lg text-right font-medium text-gray-900 dark:text-white dark:text-white">
+                                          {item.amount.toLocaleString('ru-RU')}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                              {reportItems.length === 0 && (
+                                <p className="text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400 dark:text-slate-400 text-center py-4">Нет добавленных работ</p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Дата отчета</label>
+                            <input
+                              type="date"
+                              value={formData.date}
+                              onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Период с</label>
+                              <input
+                                type="date"
+                                value={formData.periodStart}
+                                onChange={e => setFormData(prev => ({ ...prev, periodStart: e.target.value }))}
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Период по</label>
+                              <input
+                                type="date"
+                                value={formData.periodEnd}
+                                onChange={e => setFormData(prev => ({ ...prev, periodEnd: e.target.value }))}
+                                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Выполненные работы</label>
+                            <textarea
+                              rows={3}
+                              placeholder="Опишите выполненные работы..."
+                              value={formData.workDone}
+                              onChange={e => setFormData(prev => ({ ...prev, workDone: e.target.value }))}
+                              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] resize-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Примечания</label>
+                            <textarea
+                              rows={2}
+                              placeholder="Дополнительные заметки..."
+                              value={formData.notes}
+                              onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] resize-none"
+                            />
+                          </div>
+                          <div className="flex gap-4 pt-4">
+                            <button
+                              onClick={handleSave}
+                              disabled={saving}
+                              className="flex-1 bg-[#1976d2] hover:bg-[#1565c0] disabled:bg-gray-400 dark:bg-slate-600 dark:bg-slate-600 text-white py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                            >
+                              {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
+                              {saving ? 'Сохранение...' : 'Сохранить'}
+                            </button>
+                            <button
+                              onClick={() => { setIsModalOpen(false); setSelectedReportType(''); }}
+                              className="flex-1 bg-gray-200 dark:bg-slate-700 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-600 dark:bg-slate-600 text-gray-700 dark:text-slate-300 dark:text-slate-300 py-3 px-4 rounded-lg font-semibold transition-colors"
+                              disabled={saving}
+                            >
+                              Отмена
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </Modal>
                 </div>
               );
             }
-            return null;
-          })()}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Дата отчета</label>
-            <input
-              type="date"
-              value={formData.date}
-              onChange={e => setFormData(prev => ({ ...prev, date: e.target.value }))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Период с</label>
-              <input
-                type="date"
-                value={formData.periodStart}
-                onChange={e => setFormData(prev => ({ ...prev, periodStart: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Период по</label>
-              <input
-                type="date"
-                value={formData.periodEnd}
-                onChange={e => setFormData(prev => ({ ...prev, periodEnd: e.target.value }))}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Выполненные работы</label>
-            <textarea
-              rows={4}
-              placeholder="Опишите выполненные работы..."
-              value={formData.workDone}
-              onChange={e => setFormData(prev => ({ ...prev, workDone: e.target.value }))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] resize-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Использованные материалы</label>
-            <input
-              type="text"
-              placeholder="Укажите использованные материалы..."
-              value={formData.materials}
-              onChange={e => setFormData(prev => ({ ...prev, materials: e.target.value }))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Примечания</label>
-            <textarea
-              rows={3}
-              placeholder="Дополнительные заметки..."
-              value={formData.notes}
-              onChange={e => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] resize-none"
-            />
-          </div>
-          <div className="flex gap-4 pt-4">
-            <button
-              onClick={handleSave}
-              className="flex-1 bg-[#1976d2] hover:bg-[#1565c0] text-white py-3 px-4 rounded-lg font-semibold transition-colors"
-            >
-              Сохранить
-            </button>
-            <button
-              onClick={() => { setIsModalOpen(false); setSelectedReportType(''); }}
-              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 px-4 rounded-lg font-semibold transition-colors"
-            >
-              Отмена
-            </button>
-          </div>
-        </div>
-      </Modal>
-    </div>
-  );
-}
