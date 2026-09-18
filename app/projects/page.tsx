@@ -43,7 +43,7 @@ export default function ProjectsPage() {
   const [brigades, setBrigades] = useState<Brigade[]>([]);
   const [brigadesLoading, setBrigadesLoading] = useState(true);
   const [clients, setClients] = useState<{ id: number; name: string }[]>([]);
-  const { confirm } = useAlert();
+  const { confirm, alert } = useAlert();
 
   const projects = useProjectStore(state => state.projects);
   const fetchProjects = useProjectStore(state => state.fetchProjects);
@@ -124,9 +124,9 @@ export default function ProjectsPage() {
     }
   };
 
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = async (data: Partial<Project>) => {
     if (editingProject) {
-      await updateProject(editingProject.id, editForm);
+      await updateProject(editingProject.id, data);
       setShowEditModal(false);
       setEditingProject(null);
       setEditForm({});
@@ -144,6 +144,7 @@ export default function ProjectsPage() {
     prepayment?: string;
     prepaymentDate?: string;
     brigadeId?: string;
+    clientId?: string;
     floors?: string;
     roofType?: string;
     roofColor?: string;
@@ -173,7 +174,11 @@ export default function ProjectsPage() {
       deadline: formData.date,
       complexity: formData.complexity,
       status: 'создан',
-      code: String(projects.length + 1).padStart(3, '0'),
+      code: (() => {
+        const existingCodes = projects.map(p => parseInt(p.code) || 0);
+        const nextCode = existingCodes.length > 0 ? Math.max(...existingCodes) + 1 : 1;
+        return String(nextCode).padStart(3, '0');
+      })(),
       prepayment: formData.prepayment ? parseInt(formData.prepayment) : null,
       prepaymentDate: formData.prepaymentDate || null,
       brigadeId: formData.brigadeId ? parseInt(formData.brigadeId) : null,
@@ -199,8 +204,16 @@ export default function ProjectsPage() {
       baseType: formData.baseType || null,
       homeType: formData.homeType || null,
     };
-    await createProject(projectData);
-    setShowModal(false);
+    try {
+      await createProject(projectData);
+      setShowModal(false);
+    } catch (e: any) {
+      if (e.message.includes('уже существует')) {
+        alert('Проект с таким кодом уже существует. Попробуйте другое название.', { title: 'Ошибка' });
+      } else {
+        alert(e.message || 'Не удалось создать проект', { title: 'Ошибка' });
+      }
+    }
   };
 
   return (

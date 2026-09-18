@@ -4,7 +4,7 @@ generator client {
 
 datasource db {
   provider = "sqlite"
-  url      = env("DATABASE_URL")
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -63,12 +63,15 @@ model Project {
   overheads           ProjectOverhead[]
   reports             ProjectReport[]
   transactions        ProjectTransaction[]
+  financialPlans      FinancialPlan[]
   client              Client?              @relation(fields: [clientId], references: [id])
   brigade             Brigade?             @relation(fields: [brigadeId], references: [id])
   unitRate            UnitRate?            @relation(fields: [unitRateId], references: [id])
   schedules           Schedule[]
   shopReports         ShopReport[]
   subcontractors      Subcontractor[]      @relation("ProjectToSubcontractor")
+  expenses            Expense[]
+  movements           WarehouseMovement[]
 
   @@map("projects")
 }
@@ -126,6 +129,8 @@ model Employee {
   @@map("employees")
 }
 
+// Note: Relations with onDelete: SetNull are defined on the child models below
+
 model WarehouseItem {
   id            Int                 @id @default(autoincrement())
   name          String
@@ -142,8 +147,8 @@ model WarehouseItem {
   lotNumber     String?
   price         Int?
   notifications Notification[]
-  movements     WarehouseMovement[]
   supplier      Supplier?           @relation(fields: [supplierId], references: [id])
+  movements     WarehouseMovement[]
 
   @@map("warehouse_items")
 }
@@ -157,10 +162,13 @@ model WarehouseMovement {
   date       DateTime
   comment    String?
   supplierId Int?
+  projectId  Int?
   createdAt  DateTime      @default(now())
+  supplier   Supplier?     @relation(fields: [supplierId], references: [id])
+  project    Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull)
   item       WarehouseItem @relation(fields: [itemId], references: [id])
-  supplier   Supplier?    @relation(fields: [supplierId], references: [id])
 
+  @@index([projectId])
   @@map("warehouse_movements")
 }
 
@@ -216,6 +224,7 @@ model MaterialEstimate {
   quantity  String
   cost      Int
   category  String?
+  stage     String?  // Этап сметы
   createdAt DateTime @default(now())
   project   Project  @relation(fields: [projectId], references: [id])
 
@@ -253,6 +262,7 @@ model CompletedWork {
   quantity  String
   cost      Int
   category  String?
+  stage     String?  // Этап сметы
   createdAt DateTime @default(now())
   project   Project  @relation(fields: [projectId], references: [id])
 
@@ -320,7 +330,7 @@ model ShopReport {
   eotItems    EOTReportItem[]
   items       ShopReportItem[]
   project     Project?         @relation(fields: [projectId], references: [id])
-  employee    Employee         @relation(fields: [employeeId], references: [id])
+  employee    Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@map("shop_reports")
 }
@@ -343,16 +353,17 @@ model ShopReportItem {
 model EmployeeWorkReport {
   id         Int      @id @default(autoincrement())
   employeeId Int
-  projectId  Int
+  projectId  Int?
   workType   String
   quantity   Float
   rate       Float
   amount     Float
   date       DateTime
   comment    String?
+  stage      String?
   createdAt  DateTime @default(now())
-  project    Project  @relation(fields: [projectId], references: [id])
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  project    Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@map("employee_work_reports")
 }
@@ -403,6 +414,22 @@ model Notification {
   @@map("notifications")
 }
 
+model FinancialPlan {
+  id              Int      @id @default(autoincrement())
+  projectId       Int
+  periodFrom      DateTime
+  periodTo        DateTime
+  plannedAmount   Int
+  comment         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  project         Project  @relation(fields: [projectId], references: [id])
+
+  @@index([periodFrom, periodTo])
+  @@index([projectId])
+  @@map("financial_plans")
+}
+
 model Expense {
   id              Int              @id @default(autoincrement())
   date            DateTime
@@ -412,11 +439,14 @@ model Expense {
   categoryId      Int?
   category        String
   supplierId      Int?
+  projectId       Int?
   createdAt       DateTime         @default(now())
-  expenseCategory ExpenseCategory? @relation(fields: [categoryId], references: [id])
   supplier        Supplier?        @relation(fields: [supplierId], references: [id])
+  expenseCategory ExpenseCategory? @relation(fields: [categoryId], references: [id])
+  project         Project?         @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   @@index([date])
+  @@index([projectId])
   @@map("expenses")
 }
 
@@ -483,7 +513,7 @@ model Penalty {
   date       DateTime
   reason     String
   createdAt  DateTime @default(now())
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@map("penalties")
 }
@@ -495,7 +525,7 @@ model Bonus {
   date       DateTime
   reason     String
   createdAt  DateTime @default(now())
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@map("bonuses")
 }
@@ -576,19 +606,19 @@ model TechEquipment {
 }
 
 model Supplier {
-  id            Int              @id @default(autoincrement())
-  companyName   String
-  contactPerson String
-  phone         String
-  email         String?
-  address       String
-  category      String
-  status        String           @default("active")
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  movements     WarehouseMovement[]
-  expenses      Expense[]
+  id             Int                 @id @default(autoincrement())
+  companyName    String
+  contactPerson  String
+  phone          String
+  email          String?
+  address        String
+  category       String
+  status         String              @default("active")
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  expenses       Expense[]
   warehouseItems WarehouseItem[]
+  movements      WarehouseMovement[]
 
   @@map("suppliers")
 }
@@ -607,7 +637,7 @@ model Schedule {
   updatedAt  DateTime @updatedAt
   brigade    Brigade? @relation(fields: [brigadeId], references: [id])
   project    Project? @relation(fields: [projectId], references: [id])
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@index([date])
   @@index([employeeId])
@@ -665,4 +695,20 @@ model ExpenseCategory {
   expenses  Expense[]
 
   @@map("expense_categories")
+}
+
+model EmployeeAdvance {
+  id          Int      @id @default(autoincrement())
+  employeeId  Int
+  employeeName String
+  amount      Int
+  date        DateTime
+  purpose     String?
+  status      String   @default("active") // active, settled
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([date])
+  @@map("employee_advances")
 }

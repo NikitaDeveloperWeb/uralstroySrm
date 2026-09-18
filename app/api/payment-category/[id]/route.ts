@@ -6,10 +6,10 @@ import { updatePaymentCategorySchema } from '@/shared/lib/validators';
 // GET /api/payment-category/[id] - получить категорию оплаты по ID
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const category = await prisma.paymentCategory.findUnique({
       where: { id: Number(id) },
     });
@@ -28,10 +28,10 @@ export async function GET(
 // PATCH /api/payment-category/[id] - обновить категорию оплаты
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
     const validated = updatePaymentCategorySchema.parse(body);
 
@@ -50,10 +50,10 @@ export async function PATCH(
 // DELETE /api/payment-category/[id] - удалить категорию оплаты
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     await prisma.paymentCategory.delete({
       where: { id: Number(id) },

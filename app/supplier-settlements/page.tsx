@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { ArrowDownToLine, ArrowUpFromLine, ChevronDown, ChevronUp, X, Plus } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, ChevronDown, ChevronUp, X, Plus, Pencil, Trash2, Download } from 'lucide-react';
 import { Modal } from '@/shared/components/ui/Modal';
 
 interface SupplierBalance {
@@ -19,6 +19,7 @@ interface Movement {
   date: string;
   comment: string | null;
   item: { name: string; quantity: number; unit: string };
+  project?: { id: number; name: string } | null;
 }
 
 interface Payment {
@@ -55,17 +56,72 @@ export default function SupplierSettlementsPage() {
   const [filter, setFilter] = useState<'all' | 'debt' | 'credit'>('all');
   const [loading, setLoading] = useState(true);
   const [isMaterialModalOpen, setIsMaterialModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingMovement, setEditingMovement] = useState<Movement | null>(null);
+  const [projects, setProjects] = useState<{ id: number; name: string }[]>([]);
+  const [selectedProject, setSelectedProject] = useState('');
+  const [materialStage, setMaterialStage] = useState('');
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportFrom, setExportFrom] = useState('');
+  const [exportTo, setExportTo] = useState('');
+  const [exportLoading, setExportLoading] = useState(false);
   const matNameRef = useRef<HTMLInputElement>(null);
   const matCategoryRef = useRef<HTMLInputElement>(null);
   const matQuantityRef = useRef<HTMLInputElement>(null);
   const matUnitRef = useRef<HTMLSelectElement>(null);
   const matPriceRef = useRef<HTMLInputElement>(null);
+  const matDiscountRef = useRef<HTMLInputElement>(null);
+  const matTotalRef = useRef<HTMLInputElement>(null);
   const matAmountRef = useRef<HTMLInputElement>(null);
   const matDateRef = useRef<HTMLInputElement>(null);
   const matCommentRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchSuppliers();
+  }, []);
+
+  useEffect(() => {
+    if (isMaterialModalOpen || isEditModalOpen) {
+      fetch('/api/projects')
+        .then(res => res.json())
+        .then(data => {
+          const items = (data as any).data || data || [];
+          setProjects(Array.isArray(items) ? items : []);
+        })
+        .catch(err => console.error('Failed to fetch projects:', err));
+      setMaterialStage('');
+    }
+  }, [isMaterialModalOpen, isEditModalOpen]);
+
+  useEffect(() => {
+    if (!isMaterialModalOpen && !isEditModalOpen) {
+      setTimeout(() => {
+        setSelectedProject('');
+        if (matNameRef.current) matNameRef.current.value = '';
+        if (matCategoryRef.current) matCategoryRef.current.value = '';
+        if (matQuantityRef.current) matQuantityRef.current.value = '';
+        if (matPriceRef.current) matPriceRef.current.value = '';
+        if (matDiscountRef.current) matDiscountRef.current.value = '';
+        if (matAmountRef.current) matAmountRef.current.value = '';
+        if (matCommentRef.current) matCommentRef.current.value = '';
+        if (matDateRef.current) matDateRef.current.value = new Date().toISOString().split('T')[0];
+      }, 0);
+    }
+  }, [isMaterialModalOpen, isEditModalOpen]);
+
+  useEffect(() => {
+    const updateTotal = () => {
+      const quantity = parseFloat(matQuantityRef.current?.value || '0') || 0;
+      const price = parseFloat(matPriceRef.current?.value || '0') || 0;
+      const discount = parseFloat(matDiscountRef.current?.value || '0') || 0;
+      const total = quantity * price * (1 - discount / 100);
+      if (matTotalRef.current) {
+        matTotalRef.current.value = total > 0 ? total.toFixed(2) : '';
+      }
+    };
+    updateTotal();
+    const interval = setInterval(updateTotal, 300);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchSuppliers = async () => {
@@ -96,6 +152,146 @@ export default function SupplierSettlementsPage() {
     }
   };
 
+  const handleExport = async () => {
+    try {
+      setExportLoading(true);
+      const params = new URLSearchParams({
+        supplierId: String(detail?.supplier.id),
+      });
+      if (exportFrom) params.set('from', exportFrom);
+      if (exportTo) params.set('to', exportTo);
+
+      const res = await fetch(`/api/supplier-settlements/export?${params}`);
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.message || 'Ошибка при экспорте');
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Выписка_${detail?.supplier.companyName || 'supplier'}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setIsExportModalOpen(false);
+    } catch (err) {
+      console.error('Failed to export:', err);
+      alert('Ошибка при экспорте выписки');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isEditModalOpen && editingMovement) {
+      setTimeout(() => {
+        if (matNameRef.current) matNameRef.current.value = editingMovement.item.name || '';
+        if (matCategoryRef.current) matCategoryRef.current.value = editingMovement.item.name || '';
+        if (matQuantityRef.current) matQuantityRef.current.value = String(editingMovement.item.quantity || '');
+        if (matAmountRef.current) matAmountRef.current.value = String(editingMovement.amount || '');
+        if (matCommentRef.current) matCommentRef.current.value = editingMovement.comment || '';
+        if (matDateRef.current) matDateRef.current.value = editingMovement.date.split('T')[0];
+      }, 0);
+    }
+  }, [isEditModalOpen, editingMovement]);
+
+  const handleEditMaterial = async () => {
+    try {
+      if (!editingMovement) {
+        alert('Данные материала не загружены');
+        return;
+      }
+
+      const quantity = matQuantityRef.current?.value;
+      const amount = matAmountRef.current?.value;
+
+      if (!quantity) {
+        alert('Заполните обязательные поля: количество');
+        return;
+      }
+
+      const discount = parseFloat(matDiscountRef.current?.value || '0') || 0;
+      const body = {
+        supplierId: detail?.supplier.id,
+        name: matNameRef.current?.value?.trim(),
+        category: matCategoryRef.current?.value?.trim(),
+        quantity,
+        unit: matUnitRef.current?.value || 'шт',
+        price: matPriceRef.current?.value || null,
+        discount,
+        amount,
+        date: matDateRef.current?.value || new Date().toISOString().split('T')[0],
+        comment: matCommentRef.current?.value?.trim() || null,
+        projectId: selectedProject ? Number(selectedProject) : null,
+        stage: materialStage || null,
+      };
+
+      const res = await fetch(`/api/supplier-materials/${editingMovement.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.message || 'Ошибка при обновлении материала');
+        return;
+      }
+
+      setIsEditModalOpen(false);
+      setEditingMovement(null);
+      if (matNameRef.current) matNameRef.current.value = '';
+      if (matCategoryRef.current) matCategoryRef.current.value = '';
+      if (matQuantityRef.current) matQuantityRef.current.value = '';
+      if (matPriceRef.current) matPriceRef.current.value = '';
+      if (matDiscountRef.current) matDiscountRef.current.value = '';
+      if (matAmountRef.current) matAmountRef.current.value = '';
+      if (matCommentRef.current) matCommentRef.current.value = '';
+      if (matDateRef.current) matDateRef.current.value = new Date().toISOString().split('T')[0];
+      setSelectedProject('');
+      setMaterialStage('');
+      if (detail) {
+        fetchSupplierDetail(detail.supplier.id);
+      }
+    } catch (err) {
+      console.error('Failed to edit material:', err);
+      alert('Ошибка при обновлении материала');
+    }
+  };
+
+  const openEditModal = (movement: Movement) => {
+    setEditingMovement(movement);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeleteMaterial = async (movementId: number) => {
+    if (!confirm('Удалить это поступление?')) return;
+
+    try {
+      const res = await fetch(`/api/supplier-materials/${movementId}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.message || 'Ошибка при удалении материала');
+        return;
+      }
+
+      if (detail) {
+        fetchSupplierDetail(detail.supplier.id);
+      }
+    } catch (err) {
+      console.error('Failed to delete material:', err);
+      alert('Ошибка при удалении материала');
+    }
+  };
+
   const filteredSuppliers = suppliers.filter((s) => {
     if (filter === 'debt') return s.balance > 0;
     if (filter === 'credit') return s.balance < 0;
@@ -112,16 +308,22 @@ export default function SupplierSettlementsPage() {
 
   const handleAddMaterial = async () => {
     try {
+      if (!detail) {
+        alert('Данные поставщика не загружены');
+        return;
+      }
+      
       const name = matNameRef.current?.value?.trim();
       const category = matCategoryRef.current?.value?.trim();
       const quantity = matQuantityRef.current?.value;
       const amount = matAmountRef.current?.value;
 
-      if (!name || !category || !quantity || !amount) {
+      if (!name || !category || !quantity) {
         alert('Заполните обязательные поля: название, категория, количество и сумма');
         return;
       }
 
+      const discount = parseFloat(matDiscountRef.current?.value || '0') || 0;
       const body = {
         supplierId: detail.supplier.id,
         name,
@@ -129,9 +331,12 @@ export default function SupplierSettlementsPage() {
         quantity,
         unit: matUnitRef.current?.value || 'шт',
         price: matPriceRef.current?.value || null,
+        discount,
         amount,
         date: matDateRef.current?.value || new Date().toISOString().split('T')[0],
         comment: matCommentRef.current?.value?.trim() || null,
+        projectId: selectedProject ? Number(selectedProject) : null,
+        stage: materialStage || null,
       };
 
       console.log('Sending:', body);
@@ -154,9 +359,12 @@ export default function SupplierSettlementsPage() {
       if (matCategoryRef.current) matCategoryRef.current.value = '';
       if (matQuantityRef.current) matQuantityRef.current.value = '';
       if (matPriceRef.current) matPriceRef.current.value = '';
+      if (matDiscountRef.current) matDiscountRef.current.value = '';
       if (matAmountRef.current) matAmountRef.current.value = '';
       if (matCommentRef.current) matCommentRef.current.value = '';
       if (matDateRef.current) matDateRef.current.value = new Date().toISOString().split('T')[0];
+      setSelectedProject('');
+      setMaterialStage('');
       fetchSupplierDetail(detail.supplier.id);
     } catch (err) {
       console.error('Failed to add material:', err);
@@ -313,12 +521,24 @@ export default function SupplierSettlementsPage() {
         title={detail?.supplier.companyName || 'Детали'}>
         {detail && (
           <div className="space-y-6">
-            <button
-              onClick={() => setIsMaterialModalOpen(true)}
-              className="flex items-center gap-2 bg-[#1976d2] hover:bg-[#1565c0] text-white font-semibold px-4 py-2 rounded-lg transition-colors w-full justify-center">
-              <Plus className="w-4 h-4" />
-              Добавить материал от этого поставщика
-            </button>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => setIsMaterialModalOpen(true)}
+                className="flex items-center gap-2 bg-[#1976d2] hover:bg-[#1565c0] text-white font-semibold px-4 py-2 rounded-lg transition-colors w-full justify-center">
+                <Plus className="w-4 h-4" />
+                Добавить материал
+              </button>
+              <button
+                onClick={() => {
+                  setExportFrom('');
+                  setExportTo('');
+                  setIsExportModalOpen(true);
+                }}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors w-full justify-center">
+                <Download className="w-4 h-4" />
+                Получить выписку за период
+              </button>
+            </div>
             {/* Контактная информация */}
             <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 space-y-2">
               <h3 className="font-semibold text-gray-900 dark:text-white">Контакты</h3>
@@ -386,19 +606,38 @@ export default function SupplierSettlementsPage() {
                 <ArrowDownToLine className="w-4 h-4 text-green-600" />
                 Приход материалов ({detail.movements.length})
               </h3>
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+              <div className="space-y-2 max-h-96 overflow-y-auto">
                 {detail.movements.map((m) => (
-                  <div key={m.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
-                    <div>
+                  <div key={m.id} className="flex justify-between items-start p-3 bg-gray-50 dark:bg-slate-700 rounded-lg">
+                    <div className="flex-1">
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
                         {m.item?.name || '—'} — {m.item?.quantity || 0} {m.item?.unit || '—'}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-slate-400">{formatDate(m.date)}</p>
+                      {m.project && <p className="text-xs text-blue-600 dark:text-blue-400">Проект: {m.project.name}</p>}
                       {m.comment && <p className="text-xs text-gray-500 dark:text-slate-400">{m.comment}</p>}
                     </div>
-                    <span className="text-sm font-semibold text-green-600">
-                      +{m.amount ? formatCurrency(m.amount) : '—'} ₽
-                    </span>
+                    <div className="flex items-center gap-2 ml-3">
+                      <span className="text-sm font-semibold text-green-600">
+                        +{m.amount ? formatCurrency(m.amount) : '—'} ₽
+                      </span>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => openEditModal(m)}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors p-1"
+                          title="Редактировать"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteMaterial(m.id)}
+                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors p-1"
+                          title="Удалить"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
                 {detail.movements.length === 0 && (
@@ -478,6 +717,7 @@ export default function SupplierSettlementsPage() {
                 <input
                   ref={matQuantityRef}
                   type="number"
+                  step="any"
                   className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
                   placeholder="100"
                 />
@@ -503,6 +743,31 @@ export default function SupplierSettlementsPage() {
                   type="number"
                   className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
                   placeholder="50"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Скидка (%)</label>
+                <input
+                  ref={matDiscountRef}
+                  type="number"
+                  step="any"
+                  min="0"
+                  max="100"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Итого с учётом скидки</label>
+                <input
+                  ref={matTotalRef}
+                  type="number"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white bg-gray-50 dark:bg-slate-600"
+                  placeholder="Считается автоматически"
+                  readOnly
                 />
               </div>
             </div>
@@ -537,6 +802,35 @@ export default function SupplierSettlementsPage() {
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Проект (опционально)</label>
+              <select
+                value={selectedProject}
+                onChange={(e) => setSelectedProject(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+              >
+                <option value="">Без проекта</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedProject && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Этап (опционально)</label>
+                <input
+                  type="text"
+                  value={materialStage}
+                  onChange={(e) => setMaterialStage(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                  placeholder="Например: Фундамент, Стены, Крыша"
+                />
+              </div>
+            )}
+
             <div className="flex gap-4 pt-4">
               <button
                 type="submit"
@@ -551,6 +845,239 @@ export default function SupplierSettlementsPage() {
               </button>
             </div>
           </form>
+        )}
+      </Modal>
+
+      {/* Модальное окно редактирования материала */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingMovement(null);
+        }}
+        title={editingMovement ? `Редактировать материал` : 'Редактировать материал'}>
+        {detail && editingMovement && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleEditMaterial();
+            }}
+            className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Название *</label>
+                <input
+                  ref={matNameRef}
+                  type="text"
+                  defaultValue={editingMovement.item.name}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                  placeholder="Цемент М500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Категория *</label>
+                <input
+                  ref={matCategoryRef}
+                  type="text"
+                  defaultValue={editingMovement.item.name}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                  placeholder="Стройматериалы"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Количество *</label>
+                <input
+                  ref={matQuantityRef}
+                  type="number"
+                  step="any"
+                  defaultValue={editingMovement.item.quantity}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                  placeholder="100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Ед. изм.</label>
+                <select
+                  ref={matUnitRef}
+                  defaultValue={editingMovement.item.unit}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white">
+                  <option value="шт">шт</option>
+                  <option value="м²">м²</option>
+                  <option value="м³">м³</option>
+                  <option value="кг">кг</option>
+                  <option value="тонна">тонна</option>
+                  <option value="м">м</option>
+                  <option value="комплект">комплект</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Цена за ед.</label>
+                <input
+                  ref={matPriceRef}
+                  type="number"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                  placeholder="50"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Скидка (%)</label>
+                <input
+                  ref={matDiscountRef}
+                  type="number"
+                  step="any"
+                  min="0"
+                  max="100"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                  placeholder="0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Итого с учётом скидки</label>
+                <input
+                  ref={matTotalRef}
+                  type="number"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white bg-gray-50 dark:bg-slate-600"
+                  placeholder="Считается автоматически"
+                  readOnly
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Общая сумма * (₽)</label>
+                <input
+                  ref={matAmountRef}
+                  type="number"
+                  defaultValue={editingMovement.amount || ''}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                  placeholder="5000"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Дата</label>
+                <input
+                  ref={matDateRef}
+                  type="date"
+                  defaultValue={editingMovement.date.split('T')[0]}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Комментарий</label>
+              <input
+                ref={matCommentRef}
+                type="text"
+                defaultValue={editingMovement.comment || ''}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                placeholder="Необязательно"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Проект (опционально)</label>
+              <select
+                value={selectedProject}
+                onChange={(e) => setSelectedProject(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+              >
+                <option value="">Без проекта</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedProject && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Этап (опционально)</label>
+                <input
+                  type="text"
+                  value={materialStage}
+                  onChange={(e) => setMaterialStage(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                  placeholder="Например: Фундамент, Стены, Крыша"
+                />
+              </div>
+            )}
+
+            <div className="flex gap-4 pt-4">
+              <button
+                type="submit"
+                className="flex-1 bg-[#1976d2] hover:bg-[#1565c0] text-white py-3 px-4 rounded-lg font-semibold transition-colors">
+                Сохранить
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingMovement(null);
+                }}
+                className="flex-1 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300 py-3 px-4 rounded-lg font-semibold transition-colors">
+                Отмена
+              </button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Модальное окно экспорта выписки */}
+      <Modal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        title={detail ? `Выписка — ${detail.supplier.companyName}` : 'Выписка'}>
+        {detail && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600 dark:text-slate-300">
+              Выберите период для формирования выписки. Если период не указан, будет экспортирована полная выписка.
+            </p>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Дата с</label>
+                <input
+                  type="date"
+                  value={exportFrom}
+                  onChange={(e) => setExportFrom(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Дата по</label>
+                <input
+                  type="date"
+                  value={exportTo}
+                  onChange={(e) => setExportTo(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-4 pt-4">
+              <button
+                onClick={handleExport}
+                disabled={exportLoading}
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
+                <Download className="w-4 h-4" />
+                {exportLoading ? 'Генерация...' : 'Скачать Excel'}
+              </button>
+              <button
+                onClick={() => setIsExportModalOpen(false)}
+                className="flex-1 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300 py-3 px-4 rounded-lg font-semibold transition-colors">
+                Отмена
+              </button>
+            </div>
+          </div>
         )}
       </Modal>
     </div>

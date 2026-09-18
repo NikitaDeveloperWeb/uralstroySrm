@@ -50,6 +50,7 @@ export async function PATCH(request: NextRequest) {
         quantity: e.quantity,
         cost: e.cost,
         category: e.category || null,
+        stage: e.stage || null,
       })),
     });
 
@@ -71,15 +72,21 @@ export async function PATCH(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const validated = createMaterialEstimateSchema.parse(body);
+
+    // Разрешаем создавать пустые заготовки
+    const projectId = Number(body.projectId);
+    if (!projectId) {
+      return errorResponse('Не указан projectId', 400);
+    }
 
     const estimate = await prisma.materialEstimate.create({
       data: {
-        projectId: validated.projectId,
-        name: validated.name,
-        quantity: validated.quantity,
-        cost: validated.cost,
-        category: validated.category || null,
+        projectId,
+        name: body.name || '',
+        quantity: body.quantity || '',
+        cost: Number(body.cost) || 0,
+        category: body.category || null,
+        stage: body.stage || null,
       },
       include: {
         project: true,

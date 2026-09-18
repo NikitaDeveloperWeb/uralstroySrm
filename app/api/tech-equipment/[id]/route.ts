@@ -5,10 +5,10 @@ import { updateTechEquipmentSchema } from '@/shared/lib/validators';
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const equipment = await prisma.techEquipment.findUnique({
       where: { id: Number(id) },
     });
@@ -26,10 +26,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
     const validated = updateTechEquipmentSchema.parse(body);
 
@@ -47,10 +47,10 @@ export async function PATCH(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     await prisma.techEquipment.delete({
       where: { id: Number(id) },
     });

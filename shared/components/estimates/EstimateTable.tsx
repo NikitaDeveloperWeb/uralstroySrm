@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, useMemo, memo } from 'react';
 import { Pencil, Save, X, Plus, Trash2, CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Modal } from '@/shared/components/ui/Modal';
 import type { Material } from '@/shared/types/material';
+import { EditableCell } from './EditableCell';
 
 interface EstimateItem {
   id?: number;
@@ -12,6 +13,7 @@ interface EstimateItem {
   quantity: string;
   cost: number;
   category?: string | null;
+  stage?: string | null;
 }
 
 export interface TemplateItem {
@@ -41,7 +43,7 @@ interface EstimateTableProps {
   isEditing?: boolean;
 }
 
-export function EstimateTable({
+function EstimateTableBase({
   items,
   templates,
   materials,
@@ -63,25 +65,36 @@ export function EstimateTable({
   const selectedRow = selectedRowIndex !== null ? items[selectedRowIndex] : null;
   const editMode = isEditing ?? false;
 
+  const handleChange = useCallback((index: number, field: keyof EstimateItem, value: string | number) => {
+    onChange(index, field, value);
+  }, [onChange]);
+
   const totalCost = items.reduce((sum, item) => sum + (item.cost || 0), 0);
 
   const categories = Array.from(new Set(items.map(item => item.category).filter(Boolean)));
+
+  // Sort items by stage
+  const sortedItems = useMemo(() => {
+    return [...items].sort((a, b) => {
+      const stageA = a.stage || '';
+      const stageB = b.stage || '';
+      return stageA.localeCompare(stageB, 'ru');
+    });
+  }, [items]);
 
   // Фильтрация материалов
   const [materialTab, setMaterialTab] = useState<'in-stock' | 'ordered'>('in-stock');
   const [materialSearch, setMaterialSearch] = useState('');
 
-  console.log('=== EstimateTable materials ===', materials);
-
-  const filteredMaterials = (materials || [])
+  const filteredMaterials = useMemo(() => (materials || [])
     .filter(m => m.status === materialTab)
     .filter(m => 
       m.name.toLowerCase().includes(materialSearch.toLowerCase()) ||
       m.category.toLowerCase().includes(materialSearch.toLowerCase())
-    );
+    ), [materials, materialTab, materialSearch]);
 
-  const inStockCount = (materials || []).filter(m => m.status === 'in-stock').length;
-  const orderedCount = (materials || []).filter(m => m.status === 'ordered').length;
+  const inStockCount = useMemo(() => (materials || []).filter(m => m.status === 'in-stock').length, [materials]);
+  const orderedCount = useMemo(() => (materials || []).filter(m => m.status === 'ordered').length, [materials]);
 
   return (
     <div>
@@ -105,7 +118,6 @@ export function EstimateTable({
               <Button
                 onClick={() => {
                   setShowTemplatePicker(true);
-                  // Переключаемся на выбор материалов
                   setTimeout(() => {
                     const materialsTab = document.getElementById('materials-tab');
                     if (materialsTab) materialsTab.click();
@@ -113,8 +125,8 @@ export function EstimateTable({
                 }}
                 variant="outline"
                 className="border-green-600 text-green-600 hover:bg-green-50">
-                <Plus className="w-4 h-4 mr-2" /> Из материалов
-              </Button>
+              <Plus className="w-4 h-4 mr-2" /> Из материалов
+            </Button>
             )}
             {onToggleEdit && (
               <Button
@@ -144,7 +156,7 @@ export function EstimateTable({
         )}
       </div>
 
-      {/* Table */}
+      {/* Table with delegated events */}
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -159,17 +171,19 @@ export function EstimateTable({
               <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700 dark:text-slate-300 w-32">
                 Количество
               </th>
+              <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-slate-300 w-40">
+                Этап
+              </th>
               <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700 dark:text-slate-300 w-36">
                 Стоимость (₽)
               </th>
             </tr>
           </thead>
           <tbody>
-            {items.map((item, index) => {
-              const rowKey = item.id != null ? `item-${item.id}` : `row-${index}`;
+            {sortedItems.map((item, index) => {
               return (
                 <tr
-                  key={rowKey}
+                  key={item.id != null ? `item-${item.id}` : `row-${index}`}
                   className={`border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700 ${
                     editMode && selectedRowIndex === index ? 'bg-blue-50 ring-2 ring-blue-300' : ''
                   }`}
@@ -178,9 +192,11 @@ export function EstimateTable({
                 <td className="py-3 px-4 text-gray-400 dark:text-slate-500 text-sm">{index + 1}</td>
                 <td className="py-3 px-4">
                   {editMode ? (
-                    <input
+                    <EditableCell
                       value={item.name}
-                      onChange={(e) => onChange(index, 'name', e.target.value)}
+                      field="name"
+                      index={index}
+                      onChange={handleChange}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                   ) : (
@@ -189,9 +205,11 @@ export function EstimateTable({
                 </td>
                 <td className="py-3 px-4">
                   {editMode ? (
-                    <input
+                    <EditableCell
                       value={item.category || ''}
-                      onChange={(e) => onChange(index, 'category', e.target.value)}
+                      field="category"
+                      index={index}
+                      onChange={handleChange}
                       placeholder="Категория"
                       className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
@@ -203,21 +221,41 @@ export function EstimateTable({
                 </td>
                 <td className="py-3 px-4 text-center">
                   {editMode ? (
-                    <input
+                    <EditableCell
                       value={item.quantity}
-                      onChange={(e) => onChange(index, 'quantity', e.target.value)}
+                      field="quantity"
+                      index={index}
+                      onChange={handleChange}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
                     />
                   ) : (
                     <span className="text-gray-600 dark:text-slate-300">{item.quantity}</span>
                   )}
                 </td>
+                <td className="py-3 px-4">
+                  {editMode ? (
+                    <EditableCell
+                      value={item.stage || ''}
+                      field="stage"
+                      index={index}
+                      onChange={handleChange}
+                      placeholder="Этап"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  ) : (
+                    <span className="text-gray-600 dark:text-slate-300 text-sm">
+                      {item.stage || '—'}
+                    </span>
+                  )}
+                </td>
                 <td className="py-3 px-4 text-right">
                   {editMode ? (
-                    <input
-                      type="number"
+                    <EditableCell
                       value={item.cost}
-                      onChange={(e) => onChange(index, 'cost', Number(e.target.value))}
+                      field="cost"
+                      index={index}
+                      onChange={handleChange}
+                      type="number"
                       className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-right"
                     />
                   ) : (
@@ -231,7 +269,7 @@ export function EstimateTable({
             })}
             {items.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-8 text-center text-gray-500 dark:text-slate-400">
+                <td colSpan={6} className="py-8 text-center text-gray-500 dark:text-slate-400">
                   Нет данных. Нажмите «Добавить строку» или выберите шаблон/материал.
                 </td>
               </tr>
@@ -401,3 +439,5 @@ export function EstimateTable({
     </div>
   );
 }
+
+export const EstimateTable = memo(EstimateTableBase);

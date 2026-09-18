@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
             amount: entry.amount,
             recipient: entry.employeeName,
             purpose: `Аванс: ${entry.purpose || 'Выдача аванса'}`,
-            category: 'other',
+            category: 'Аванс',
           },
         });
       }

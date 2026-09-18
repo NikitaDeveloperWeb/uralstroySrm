@@ -3,19 +3,41 @@ import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse, handlePrismaError } from '@/shared/lib/api-response';
 import { createWarehouseItemSchema, updateWarehouseItemSchema } from '@/shared/lib/validators';
 
-// GET /api/warehouse - получить список товаров
-export async function GET() {
+// GET /api/warehouse - получить список товаров с пагинацией
+export async function GET(request: Request) {
   try {
-    const items = await prisma.warehouseItem.findMany({
-      include: {
-        movements: true,
-        notifications: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const status = searchParams.get('status');
+
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (status) {
+      const statusMap: Record<string, string> = {
+        'in-stock': 'достаточно',
+        'ordered': 'ordered',
+      };
+      where.status = statusMap[status] || status;
+    }
+
+    const [items, total] = await Promise.all([
+      prisma.warehouseItem.findMany({
+        where,
+        include: {
+          movements: true,
+          notifications: true,
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.warehouseItem.count({ where }),
+    ]);
 
     // Маппинг статусов из БД на фронтенд
-    const statusMap: Record<string, string> = {
+    const frontendStatusMap: Record<string, string> = {
       'достаточно': 'in-stock',
       'мало': 'in-stock',
       'критически мало': 'in-stock',
@@ -25,10 +47,18 @@ export async function GET() {
 
     const mapped = items.map((item: any) => ({
       ...item,
-      status: statusMap[item.status] || 'in-stock',
+      status: frontendStatusMap[item.status] || 'in-stock',
     }));
 
-    return successResponse(mapped);
+    return successResponse({
+      items: mapped,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    });
   } catch (error) {
     console.error('GET /api/warehouse error:', error);
     return handlePrismaError(error);

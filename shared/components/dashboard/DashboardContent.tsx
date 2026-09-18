@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Download } from 'lucide-react';
+import { Download, BarChart3 } from 'lucide-react';
+import { ProjectBalanceModal } from '@/shared/components/dashboard/ProjectBalanceModal';
+import { MonthlyPlanTable } from '@/shared/components/dashboard/MonthlyPlanTable';
 
 interface DashboardStats {
   totalProjects: number;
@@ -61,6 +63,8 @@ export function DashboardContent() {
   const [statusChartData, setStatusChartData] = useState<StatusChart[]>([]);
   const [loading, setLoading] = useState(true);
   const [isBackingUp, setIsBackingUp] = useState(false);
+  const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
+  const [isMonthlyPlanModalOpen, setIsMonthlyPlanModalOpen] = useState(false);
 
   const handleBackup = async () => {
     try {
@@ -134,8 +138,15 @@ export function DashboardContent() {
 
   return (
     <div className="space-y-6">
-      {/* Кнопка бэкапа */}
-      <div className="flex justify-end">
+      {/* Кнопки */}
+      <div className="flex justify-end gap-3">
+        <button
+          onClick={() => setIsBalanceModalOpen(true)}
+          className="flex items-center gap-2 bg-[#1976d2] hover:bg-[#1565c0] text-white font-semibold px-4 py-2 rounded-lg transition-colors"
+        >
+          <BarChart3 className="w-4 h-4" />
+          Баланс по объектам
+        </button>
         <button
           onClick={handleBackup}
           disabled={isBackingUp}
@@ -402,6 +413,17 @@ export function DashboardContent() {
           </div>
         </div>
       )}
+
+      {/* Модальное окно баланса по объектам */}
+      <ProjectBalanceModal
+        isOpen={isBalanceModalOpen}
+        onClose={() => setIsBalanceModalOpen(false)}
+      />
+
+      {/* План на месяц */}
+      <MonthlyPlanTable
+        onOpenAddModal={() => setIsMonthlyPlanModalOpen(true)}
+      />
     </div>
   );
 }

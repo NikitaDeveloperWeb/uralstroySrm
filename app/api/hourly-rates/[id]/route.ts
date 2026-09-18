@@ -12,9 +12,9 @@ const updateHourlyRateSchema = z.object({
 // GET /api/hourly-rates/[id]
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
-  const { id } = await params;
+  const { id } = await context.params;
   try {
     const rate = await prisma.hourlyRate.findUnique({
       where: { id: Number(id) },
@@ -33,9 +33,9 @@ export async function GET(
 // PATCH /api/hourly-rates/[id]
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
-  const { id } = await params;
+  const { id } = await context.params;
   try {
     const body = await request.json();
     const validated = updateHourlyRateSchema.parse(body);
@@ -58,9 +58,9 @@ export async function PATCH(
 // DELETE /api/hourly-rates/[id]
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
-  const { id } = await params;
+  const { id } = await context.params;
   try {
     await prisma.hourlyRate.update({
       where: { id: Number(id) },

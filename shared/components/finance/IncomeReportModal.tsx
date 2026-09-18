@@ -122,12 +122,9 @@ export function IncomeReportModal({ isOpen, onClose }: IncomeReportModalProps) {
       endDateStr = `${yearDate}-12-31`;
     }
 
-    const startDt = new Date(startDateStr);
-    const endDt = new Date(endDateStr);
-    
     return allTransactions.filter(t => {
-      const txDate = new Date(t.date);
-      return txDate >= startDt && txDate <= endDt;
+      const txDateStr = t.date.split('T')[0];
+      return txDateStr >= startDateStr && txDateStr <= endDateStr;
     });
   };
 

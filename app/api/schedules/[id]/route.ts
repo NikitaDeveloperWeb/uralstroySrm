@@ -17,9 +17,9 @@ const updateScheduleSchema = z.object({
 // GET /api/schedules/[id]
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
-  const { id } = await params;
+  const { id } = await context.params;
   try {
     const schedule = await prisma.schedule.findUnique({
       where: { id: Number(id) },
@@ -44,9 +44,9 @@ export async function GET(
 // PATCH /api/schedules/[id]
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
-  const { id } = await params;
+  const { id } = await context.params;
   try {
     const body = await request.json();
     const validated = updateScheduleSchema.parse(body);
@@ -86,9 +86,9 @@ export async function PATCH(
 // DELETE /api/schedules/[id]
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
-  const { id } = await params;
+  const { id } = await context.params;
   try {
     await prisma.schedule.delete({
       where: { id: Number(id) },

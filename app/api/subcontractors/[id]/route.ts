@@ -6,10 +6,10 @@ import { updateSubcontractorSchema } from '@/shared/lib/validators';
 // GET /api/subcontractors/[id] - получить подрядчика по ID
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const subcontractor = await prisma.subcontractor.findUnique({
       where: { id: Number(id) },
       include: {
@@ -31,10 +31,10 @@ export async function GET(
 // PATCH /api/subcontractors/[id] - обновить подрядчика
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
     const validated = updateSubcontractorSchema.parse(body);
 
@@ -56,10 +56,10 @@ export async function PATCH(
 // DELETE /api/subcontractors/[id] - удалить подрядчика
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     await prisma.subcontractor.delete({
       where: { id: Number(id) },

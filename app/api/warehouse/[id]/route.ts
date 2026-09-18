@@ -6,10 +6,10 @@ import { updateWarehouseItemSchema } from '@/shared/lib/validators';
 // GET /api/warehouse/[id] - получить товар по ID
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const item = await prisma.warehouseItem.findUnique({
       where: { id: Number(id) },
       include: {
@@ -41,10 +41,10 @@ export async function GET(
 // PATCH /api/warehouse/[id] - обновить товар
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
     const validated = updateWarehouseItemSchema.parse(body);
 
@@ -85,10 +85,10 @@ export async function PATCH(
 // DELETE /api/warehouse/[id] - удалить товар
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     await prisma.warehouseItem.delete({
       where: { id: Number(id) },

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Plus, X, UserPlus } from 'lucide-react';
 import { useEmployeeStore } from '@/shared/stores/employeeStore';
+import { Project } from '@/shared/types/project';
 
 interface Expense {
   id: string;
@@ -12,6 +13,8 @@ interface Expense {
   purpose: string;
   category: string;
   createdAt: string;
+  projectId?: number | null;
+  stage?: string | null;
 }
 
 interface ExpenseItem {
@@ -32,7 +35,7 @@ interface ExpenseCategory {
 interface AddExpenseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (expense: Omit<Expense, 'id' | 'createdAt'> & { supplierId?: number }) => void;
+  onSubmit: (expense: Omit<Expense, 'id' | 'createdAt'> & { supplierId?: number; projectId?: number | null }) => void;
 }
 
 export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalProps) {
@@ -50,6 +53,9 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
   const [suppliers, setSuppliers] = useState<{ id: number; companyName: string }[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState('');
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProject, setSelectedProject] = useState('');
+  const [expenseStage, setExpenseStage] = useState('');
 
   useEffect(() => {
     if (isOpen) fetchEmployees();
@@ -104,6 +110,24 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
   }, [isOpen]);
 
   useEffect(() => {
+    if (isOpen) {
+      fetch('/api/projects')
+        .then(res => res.json())
+        .then(data => {
+          const items = (data as any).data || data;
+          if (Array.isArray(items)) {
+            setProjects(items);
+          }
+        })
+        .catch(err => {
+          console.error('Failed to fetch projects:', err);
+        });
+    } else {
+      setExpenseStage('');
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
     if (category !== 'tech') {
       setSelectedEquipment('');
     } else {
@@ -133,6 +157,8 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
       setCategory('');
       setSelectedEquipment('');
       setSelectedSupplier('');
+      setSelectedProject('');
+      setExpenseStage('');
       setError('');
     }
   }, [isOpen]);
@@ -161,6 +187,7 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
       : purpose;
 
     const supplier = suppliers.find(s => s.companyName === selectedSupplier);
+    const project = projects.find(p => p.name === selectedProject);
 
     onSubmit({
       date,
@@ -169,6 +196,8 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
       purpose: finalPurpose,
       category,
       supplierId: supplier?.id,
+      projectId: project?.id ?? null,
+      stage: expenseStage || null,
     });
 
     onClose();
@@ -307,6 +336,35 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
                 ))}
               </select>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">Проект (опционально)</label>
+              <select
+                value={selectedProject}
+                onChange={(e) => setSelectedProject(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 dark:border-slate-600 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+              >
+                <option value="">Без проекта</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.name}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {selectedProject && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">Этап (опционально)</label>
+                <input
+                  type="text"
+                  value={expenseStage}
+                  onChange={(e) => setExpenseStage(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 dark:border-slate-600 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  placeholder="Например: Фундамент, Стены, Крыша"
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">Категория</label>

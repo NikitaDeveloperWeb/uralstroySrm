@@ -23,6 +23,12 @@ interface UnitRate {
   category?: string;
 }
 
+interface Project {
+  id: number;
+  name: string;
+  code: string;
+}
+
 interface ShopReportItem {
   id?: number;
   workTypeId?: number;
@@ -59,6 +65,7 @@ interface ReportEntry {
   employeeId?: number;
   employeeName?: string;
   employeePaymentType?: string;
+  projectName?: string;
   hours?: number;
   squareMeters: {
     сосна: number;
@@ -82,7 +89,7 @@ interface ReportEntry {
 const reportCards = [
   {
     id: 'цех',
-    title: 'Отчет цеха',
+    title: 'Отчет о выполненной работе',
     description: 'Отчет о работе цеха за период',
     icon: Wrench,
     color: 'bg-blue-500',
@@ -91,7 +98,7 @@ const reportCards = [
 ];
 
 const typeLabels: Record<string, string> = {
-  цех: 'Отчет цеха',
+  цех: 'Отчет о выполненной работе',
 };
 
 const typeColors: Record<string, string> = {
@@ -103,6 +110,7 @@ export default function ReportsPage() {
   const [shopReports, setShopReports] = useState<ShopReport[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [unitRates, setUnitRates] = useState<UnitRate[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedReportType, setSelectedReportType] = useState('');
   const [loading, setLoading] = useState(true);
@@ -120,6 +128,7 @@ export default function ReportsPage() {
   const [reportItems, setReportItems] = useState<ShopReportItem[]>([]);
   const [filterDate, setFilterDate] = useState('');
   const [filterName, setFilterName] = useState('');
+  const [filterProject, setFilterProject] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const REPORTS_PER_PAGE = 10;
   const [isExporting, setIsExporting] = useState(false);
@@ -129,6 +138,7 @@ export default function ReportsPage() {
     loadReports();
     loadEmployees();
     loadUnitRates();
+    loadProjects();
   }, []);
 
   const loadReports = async () => {
@@ -147,6 +157,7 @@ export default function ReportsPage() {
         employeeId: r.employeeId,
         employeeName: r.employee.fullName,
         employeePaymentType: r.employee.paymentType,
+        projectName: r.project?.name || null,
         squareMeters: {
           сосна: 0,
           липа: 0,
@@ -181,6 +192,18 @@ export default function ReportsPage() {
       setUnitRates(data);
     } catch (error) {
       console.error('Error loading unit rates:', error);
+    }
+  };
+
+  const loadProjects = async () => {
+    try {
+      const res = await fetch('/api/projects');
+      if (res.ok) {
+        const data = await res.json();
+        setProjects(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error loading projects:', error);
     }
   };
 
@@ -258,7 +281,7 @@ export default function ReportsPage() {
   const handleExportExcel = () => {
     const wb = XLSX.utils.book_new();
     const rows: string[][] = [
-      ['Отчеты цеха'],
+      ['Отчеты о выполненной работе'],
       ['#', 'Сотрудник', 'Период с', 'Период по', 'Дата', 'Выполненные работы', 'Заработок'],
     ];
     filteredReports.forEach((report, i) => {
@@ -303,7 +326,8 @@ export default function ReportsPage() {
   const filteredReports = reports.filter(r => {
     const matchesDate = !filterDate || r.date === filterDate;
     const matchesName = !filterName || (r.employeeName && r.employeeName.toLowerCase().includes(filterName.toLowerCase()));
-    return matchesDate && matchesName;
+    const matchesProject = !filterProject || (r.projectName && r.projectName.toLowerCase().includes(filterProject.toLowerCase()));
+    return matchesDate && matchesName && matchesProject;
   });
 
   const totalPages = Math.ceil(filteredReports.length / REPORTS_PER_PAGE) || 1;
@@ -365,6 +389,21 @@ export default function ReportsPage() {
             className="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] text-gray-900 dark:text-white dark:text-white dark:bg-slate-700 dark:text-white"
           />
         </div>
+        <div className="relative flex-1">
+          <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+            <Search className="w-5 h-5 text-gray-400 dark:text-slate-500 dark:text-slate-500" />
+          </div>
+          <select
+            value={filterProject}
+            onChange={(e) => setFilterProject(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] text-gray-900 dark:text-white dark:text-white dark:bg-slate-700 dark:text-white"
+          >
+            <option value="">Все объекты</option>
+            {projects.map(p => (
+              <option key={p.id} value={p.name}>{p.code} — {p.name}</option>
+            ))}
+          </select>
+        </div>
         {filteredReports.length > 0 && (
           <button
             onClick={handleExportExcel}
@@ -412,7 +451,7 @@ export default function ReportsPage() {
                       onClick={() => {
                         const wb = XLSX.utils.book_new();
                         const rows: string[][] = [
-                          ['Отчет цеха'],
+                          ['Отчет о выполненной работе'],
                           ['Сотрудник', report.employeeName || '—'],
                           ['Период', new Date(report.periodStart).toLocaleDateString('ru-RU') + ' - ' + new Date(report.periodEnd).toLocaleDateString('ru-RU')],
                           ['Дата', new Date(report.date).toLocaleDateString('ru-RU')],
@@ -462,6 +501,12 @@ export default function ReportsPage() {
                             <div className="mb-3">
                                 <p className="text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400 mb-1">Сотрудник</p>
                                 <p className="text-gray-900 dark:text-white dark:text-white">{report.employeeName}</p>
+                              </div>
+                            )}
+                            {report.projectName && (
+                              <div className="mb-3">
+                                <p className="text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400 mb-1">Объект</p>
+                                <p className="text-gray-900 dark:text-white dark:text-white">{report.projectName}</p>
                               </div>
                             )}
                             {report.totalAmount && (
@@ -534,6 +579,20 @@ export default function ReportsPage() {
                               <option value="">Выберите сотрудника</option>
                               {employees.map(emp => (
                                 <option key={emp.id} value={emp.id}>{emp.fullName}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Объект (необязательно)</label>
+                            <select
+                              value={formData.projectId}
+                              onChange={e => setFormData(prev => ({ ...prev, projectId: e.target.value ? Number(e.target.value) : '' }))}
+                              className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                            >
+                              <option value="">Без объекта</option>
+                              {projects.map(p => (
+                                <option key={p.id} value={p.id}>{p.code} — {p.name}</option>
                               ))}
                             </select>
                           </div>

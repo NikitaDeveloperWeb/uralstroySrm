@@ -4,9 +4,9 @@ import { prisma } from '@/lib/prisma';
 // GET /api/advance-reports/[id]
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
-  const { id } = await params;
+  const { id } = await context.params;
 
   try {
     const report = await prisma.advanceReport.findUnique({
@@ -34,9 +34,9 @@ export async function GET(
 // PATCH /api/advance-reports/[id]
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
-  const { id } = await params;
+  const { id } = await context.params;
 
   try {
     const body = await request.json();
@@ -102,9 +102,9 @@ export async function PATCH(
 // DELETE /api/advance-reports/[id]
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
-  const { id } = await params;
+  const { id } = await context.params;
 
   try {
     const report = await prisma.advanceReport.findUnique({

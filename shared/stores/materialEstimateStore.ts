@@ -39,6 +39,7 @@ export interface CompletedWorkItem {
   quantity: string;
   cost: number;
   category?: string | null;
+  stage?: string | null;
   createdAt: string;
 }
 
@@ -46,15 +47,15 @@ interface MaterialEstimateStore {
   materialEstimates: ProjectMaterial[];
   materialTemplates: MaterialTemplate[];
   materials: Material[];
-  completedWorks: CompletedWorkItem[];
+  completedWorks: (CompletedWorkItem & { stage?: string | null })[];
   workTemplates: WorkTemplate[];
   surveyUnitRates: UnitRate[];
   loading: boolean;
   error: string | null;
   
   fetchMaterialEstimates: (projectId?: number) => Promise<void>;
-  createMaterialEstimate: (data: { projectId: number; name: string; quantity: string; cost: number; category?: string }) => Promise<void>;
-  updateMaterialEstimate: (id: number, data: { name?: string; quantity?: string; cost?: number; category?: string }) => Promise<void>;
+  createMaterialEstimate: (data: { projectId: number; name: string; quantity: string; cost: number; category?: string; stage?: string }) => Promise<void>;
+  updateMaterialEstimate: (id: number, data: { name?: string; quantity?: string; cost?: number; category?: string; stage?: string }) => Promise<void>;
   deleteMaterialEstimate: (id: number) => Promise<void>;
   deleteAllForProject: (projectId: number) => Promise<void>;
   
@@ -67,8 +68,8 @@ interface MaterialEstimateStore {
   getMaterialsByStatus: (status: 'in-stock' | 'ordered') => Material[];
   
   fetchCompletedWorks: (projectId?: number) => Promise<void>;
-  createCompletedWork: (data: { projectId: number; name: string; quantity: string; cost: number; category?: string }) => Promise<void>;
-  updateCompletedWork: (id: number, data: { name?: string; quantity?: string; cost?: number; category?: string }) => Promise<void>;
+  createCompletedWork: (data: { projectId: number; name: string; quantity: string; cost: number; category?: string; stage?: string }) => Promise<void>;
+  updateCompletedWork: (id: number, data: { name?: string; quantity?: string; cost?: number; category?: string; stage?: string }) => Promise<void>;
   deleteCompletedWork: (id: number) => Promise<void>;
   deleteAllCompletedWorks: (projectId: number) => Promise<void>;
   
@@ -103,15 +104,12 @@ export const useMaterialEstimateStore = create<MaterialEstimateStore>((set, get)
   createMaterialEstimate: async (data) => {
     set({ loading: true, error: null });
     try {
-      const { data: created } = await apiFetch<ApiResponse<ProjectMaterial>>('/api/material-estimates', {
+      await apiFetch<ApiResponse<ProjectMaterial>>('/api/material-estimates', {
         method: 'POST',
         body: JSON.stringify(data),
       });
-      set((s) => ({
-        materialEstimates: [created!, ...s.materialEstimates],
-        loading: false,
-        error: null,
-      }));
+      const { data: estimates } = await apiFetch<ApiResponse<ProjectMaterial[]>>(createQueryUrl('/api/material-estimates', { projectId: String(data.projectId) }));
+      set({ materialEstimates: estimates ?? [], loading: false, error: null });
     } catch (e: unknown) {
       set({ error: (e as Error).message, loading: false });
       throw e;
@@ -188,7 +186,7 @@ export const useMaterialEstimateStore = create<MaterialEstimateStore>((set, get)
         body: JSON.stringify(data),
       });
       set((s) => ({
-        materialTemplates: [created!, ...s.materialTemplates],
+        materialTemplates: [...s.materialTemplates, created!],
         loading: false,
         error: null,
       }));
@@ -244,15 +242,28 @@ export const useMaterialEstimateStore = create<MaterialEstimateStore>((set, get)
   createCompletedWork: async (data) => {
     set({ loading: true, error: null });
     try {
-      const { data: created } = await apiFetch<ApiResponse<CompletedWorkItem>>('/api/completed-works', {
+      const payload = {
+        projectId: data.projectId,
+        name: data.name,
+        quantity: data.quantity,
+        cost: data.cost,
+        category: data.category || undefined,
+        stage: data.stage || undefined,
+      };
+      console.log('createCompletedWork payload:', payload);
+      const response = await fetch('/api/completed-works', {
         method: 'POST',
-        body: JSON.stringify(data),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
-      set((s) => ({
-        completedWorks: [created!, ...s.completedWorks],
-        loading: false,
-        error: null,
-      }));
+      const result = await response.json();
+      console.log('createCompletedWork response:', result);
+      if (!response.ok) {
+        throw new Error(result.error || 'Ошибка создания');
+      }
+      // Refetch to get accurate data
+      const { data: works } = await apiFetch<ApiResponse<CompletedWorkItem[]>>(createQueryUrl('/api/completed-works', { projectId: String(data.projectId) }));
+      set({ completedWorks: works ?? [], loading: false, error: null });
     } catch (e: unknown) {
       set({ error: (e as Error).message, loading: false });
       throw e;
@@ -262,15 +273,19 @@ export const useMaterialEstimateStore = create<MaterialEstimateStore>((set, get)
   updateCompletedWork: async (id, data) => {
     set({ loading: true, error: null });
     try {
-      const { data: updated } = await apiFetch<ApiResponse<CompletedWorkItem>>(`/api/completed-works/${id}`, {
+      await apiFetch<ApiResponse<CompletedWorkItem>>(`/api/completed-works/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
-      set((s) => ({
-        completedWorks: s.completedWorks.map(w => w.id === id ? updated! : w),
-        loading: false,
-        error: null,
-      }));
+      // Refetch to get accurate data
+      const allWorks = get().completedWorks;
+      const projectId = allWorks.find(w => w.id === id)?.projectId;
+      if (projectId) {
+        const { data: works } = await apiFetch<ApiResponse<CompletedWorkItem[]>>(createQueryUrl('/api/completed-works', { projectId: String(projectId) }));
+        set({ completedWorks: works ?? [], loading: false, error: null });
+      } else {
+        set({ loading: false });
+      }
     } catch (e: unknown) {
       set({ error: (e as Error).message, loading: false });
       throw e;
@@ -329,7 +344,7 @@ export const useMaterialEstimateStore = create<MaterialEstimateStore>((set, get)
         body: JSON.stringify(data),
       });
       set((s) => ({
-        workTemplates: [created!, ...s.workTemplates],
+        workTemplates: [...s.workTemplates, created!],
         loading: false,
         error: null,
       }));

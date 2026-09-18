@@ -823,12 +823,201 @@
         <Execute>
           <option name="pattern" value="del E:/Uralstroy/my-app/clear-default-works.js" />
         </Execute>
+        <Execute>
+          <option name="pattern" value="del E:/Uralstroy/my-app/.env" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="taskkill /PID 8196 /F" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;const { PrismaClient } = require('@prisma/client'); const p = new PrismaClient(); p.expense.updateMany({ where: { category: '' }, data: { category: 'Прочее' } }).then(r =&gt; { console.log('Updated:', r.count); p.$disconnect(); }).catch(e =&gt; { console.error(e); p.$disconnect(); process.exit(1); });&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node fix-categories.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="del &quot;shared\components\estimates\EstimateTable.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="wc *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;(Get-Content 'E:\Uralstroy\my-app\shared\components\estimates\EstimateTable.tsx').Count&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="dir &quot;E:\Uralstroy\my-app\shared\components\estimates&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Get-ChildItem 'E:\Uralstroy\my-app\shared\components\estimates' | Format-Table Name, Length&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Copy-Item &quot;E:\Uralstroy\my-app\prisma\backups\backup_2026-09-10T11-55-40.db&quot; &quot;E:\Uralstroy\my-app\prisma\dev.db&quot; -Force" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item &quot;E:\Uralstroy\my-app\app\skills\page.tsx&quot; -Force" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -First 60" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force -ErrorAction SilentlyContinue node_modules\.prisma\client" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Test-Path E:\Uralstroy\my-app\node_modules" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-ChildItem E:\Uralstroy\my-app\node_modules -Directory" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-ChildItem E:\Uralstroy\my-app\node_modules\.prisma -Recurse -File" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Path E:\Uralstroy\my-app\node_modules\.prisma\client\index.d.ts -Pattern &quot;model Expense&quot; -Context 0,20" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Path E:\Uralstroy\my-app\node_modules\.prisma\client\index.d.ts -Pattern &quot;ExpenseInclude&quot; -Context 0,30" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="taskkill /PID 3856 /F" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Path prisma\schema.prisma -Pattern &quot;ShopReport&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Path prisma\schema.prisma -Pattern &quot;SetNull&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -Last 40" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -Last 50" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-Object -Last 60" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;$content = Get-Content 'E:\Uralstroy\my-app\app\finance\page.tsx' -Raw; $content = $content -replace '(?s)\n\n\n      /\*{EOT Section \*}/.*?/\* Fund Modals \*/', '\n\n      {/* Fund Modals */}'; Set-Content 'E:\Uralstroy\my-app\app\finance\page.tsx' $content -Encoding UTF8&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;$lines = Get-Content 'E:\Uralstroy\my-app\app\finance\page.tsx'; $lines[447..630] = @(''); $lines | Set-Content 'E:\Uralstroy\my-app\app\finance\page.tsx' -Encoding UTF8&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;$content = Get-Content 'E:\Uralstroy\my-app\app\finance\page.tsx'; $newContent = @($content[0..446], @('', ''), $content[631..($content.Length-1)]); $newContent | Set-Content 'E:\Uralstroy\my-app\app\finance\page.tsx' -Encoding UTF8&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;$f='E:\Uralstroy\my-app\app\finance\page.tsx'; $c=[System.IO.File]::ReadAllLines($f,[System.Text.Encoding]::UTF8); $c[447..630]=@(''); [System.IO.File]::WriteAllLines($f,$c,[System.Text.Encoding]::UTF8)&quot;" />
+        </Execute>
       </list>
     </option>
     <option name="autoApprovedReads">
       <list>
         <Read>
           <option name="pattern" value="$PROJECT_DIR$/../../Uuralstroy/my-app/*" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/analytics/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/shared/stores/materialEstimateStore.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/shared/components/estimates/EstimateTable.tsx" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/reports/summary/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="C:/Users/Chastopas/Desktop/Урал/урал-строй-frontend/*" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/skills/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/brigades/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/clients/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/completed-works/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/completed-works/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/employee-work-reports/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/employees/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/finance-reports/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/funds/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/hourly-rates/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/material-estimates/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/material-estimates/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/material-templates/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/notifications/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/payment-category/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/project-overheads/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/project-reports/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/projects/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/projects/[id]/transactions/[transactionId]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/salary-reports/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/schedules/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/subcontractors/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/suppliers/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/tech-equipment/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/users/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/warehouse/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/api/work-templates/[id]/route.ts" />
+        </Read>
+        <Read>
+          <option name="pattern" value="C:/Users/SergioRazor/Desktop/helpers/app/projects/[id]/estimate/MaterialsTab.tsx" />
+        </Read>
+        <Read>
+          <option name="pattern" value="C:/Users/SergioRazor/Desktop/helpers/shared/components/estimates/EstimateTable.tsx" />
+        </Read>
+        <Read>
+          <option name="pattern" value="C:/Users/SergioRazor/Desktop/helpers/app/projects/[id]/estimate/WorksTab.tsx" />
         </Read>
       </list>
     </option>

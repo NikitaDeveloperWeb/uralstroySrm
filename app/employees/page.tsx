@@ -88,7 +88,7 @@ const skillColors: Record<string, string> = {
 };
 
 export default function EmployeesPage() {
-  const [activeTab, setActiveTab] = useState<'employees' | 'brigades'>('employees');
+  const [activeTab, setActiveTab] = useState<'employees' | 'brigades' | 'skills'>('employees');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [formData, setFormData] = useState<Partial<Employee>>({});
@@ -122,6 +122,15 @@ export default function EmployeesPage() {
   const [editingBrigade, setEditingBrigade] = useState<Brigade | null>(null);
   const [brigadeFormData, setBrigadeFormData] = useState<Partial<Brigade>>({});
   const [brigadeSearch, setBrigadeSearch] = useState('');
+
+  // Skills state (moved from /skills page)
+  const [skillsSearchQuery, setSkillsSearchQuery] = useState('');
+  const [skillsCurrentPage, setSkillsCurrentPage] = useState(1);
+  const [isSkillModalOpen, setIsSkillModalOpen] = useState(false);
+  const [editingSkill, setEditingSkill] = useState<{ id: number; name: string; description: string | null } | null>(null);
+  const skillNameRef = useRef<HTMLInputElement>(null);
+  const skillDescriptionRef = useRef<HTMLTextAreaElement>(null);
+  const itemsPerPageSkills = 12;
 
   // Zustand store
   const {
@@ -364,6 +373,86 @@ export default function EmployeesPage() {
       : [...currentSkills, skill];
   };
 
+  // Skills handlers
+  const filteredSkills = (skills as any[])
+    .filter(s =>
+      s.name.toLowerCase().includes(skillsSearchQuery.toLowerCase()) ||
+      (s.description || '').toLowerCase().includes(skillsSearchQuery.toLowerCase())
+    );
+
+  const skillsTotalPages = Math.ceil(filteredSkills.length / itemsPerPageSkills);
+  const paginatedSkills = filteredSkills.slice(
+    (skillsCurrentPage - 1) * itemsPerPageSkills,
+    skillsCurrentPage * itemsPerPageSkills
+  );
+
+  useEffect(() => {
+    setSkillsCurrentPage(1);
+  }, [skillsSearchQuery]);
+
+  const handleDeleteSkill = async (id: number) => {
+    if (!(await confirm('Удалить этот навык?'))) return;
+    try {
+      await fetch(`/api/skills/${id}`, { method: 'DELETE' });
+      setSkills(prev => prev.filter(s => s.id !== id));
+    } catch (error) {
+      console.error('Failed to delete:', error);
+    }
+  };
+
+  const handleAddSkill = () => {
+    setEditingSkill(null);
+    setIsSkillModalOpen(true);
+    setTimeout(() => {
+      if (skillNameRef.current) skillNameRef.current.value = '';
+      if (skillDescriptionRef.current) skillDescriptionRef.current.value = '';
+    }, 0);
+  };
+
+  const handleEditSkill = (skill: { id: number; name: string; description: string | null }) => {
+    setEditingSkill(skill);
+    setIsSkillModalOpen(true);
+    setTimeout(() => {
+      if (skillNameRef.current) skillNameRef.current.value = skill.name;
+      if (skillDescriptionRef.current) skillDescriptionRef.current.value = skill.description || '';
+    }, 0);
+  };
+
+  const handleSaveSkill = async () => {
+    try {
+      const name = skillNameRef.current?.value?.trim() || '';
+      const description = skillDescriptionRef.current?.value?.trim() || '';
+
+      if (!name) {
+        alert('Укажите название');
+        return;
+      }
+
+      if (editingSkill) {
+        await fetch(`/api/skills/${editingSkill.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description }),
+        });
+        setSkills(prev => prev.map(s =>
+          s.id === editingSkill.id ? { ...s, name, description } : s
+        ));
+      } else {
+        const res = await fetch('/api/skills', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description }),
+        });
+        const newSkill = await res.json();
+        setSkills(prev => [...prev, newSkill.data]);
+      }
+      setIsSkillModalOpen(false);
+      setEditingSkill(null);
+    } catch (error) {
+      console.error('Failed to save:', error);
+    }
+  };
+
   const getHourlyRatePosition = (emp: Employee): string => {
     const rateId = (emp as any).hourlyRateId;
     if (!rateId) return '—';
@@ -597,6 +686,19 @@ export default function EmployeesPage() {
         >
           <Users className="w-4 h-4" />
           Бригады ({brigades.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('skills')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            activeTab === 'skills'
+              ? 'bg-[#1976d2] text-white'
+              : 'bg-gray-100 dark:bg-slate-700 dark:bg-slate-700 text-gray-600 dark:text-slate-300 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-600 dark:bg-slate-700 dark:hover:bg-slate-600 dark:bg-slate-700'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          Навыки ({skills.length})
         </button>
       </div>
 
@@ -1052,6 +1154,82 @@ export default function EmployeesPage() {
         </div>
       )}
 
+      {/* Навыки вкладка */}
+      {activeTab === 'skills' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white dark:text-white">Навыки</h2>
+            <button
+              onClick={handleAddSkill}
+              className="flex items-center gap-2 bg-[#1976d2] hover:bg-[#1565c0] text-white font-semibold px-4 py-2 rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Добавить навык
+            </button>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="w-5 h-5 text-gray-400 dark:text-slate-500 dark:text-slate-500" />
+            </div>
+            <input
+              type="text"
+              placeholder="Поиск по названию или описанию..."
+              value={skillsSearchQuery}
+              onChange={(e) => setSkillsSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] text-gray-900 dark:text-white dark:text-white"
+            />
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg shadow-md overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b-2 border-gray-200 dark:border-slate-700 dark:border-slate-700 bg-gray-50 dark:bg-slate-700 dark:bg-slate-700">
+                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">Название</th>
+                    <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">Описание</th>
+                    <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedSkills.map((skill) => (
+                    <tr key={skill.id} className="border-b border-gray-100 dark:border-slate-700 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-700 dark:bg-slate-700 transition-colors">
+                      <td className="py-4 px-6 text-gray-900 dark:text-white dark:text-white font-medium">{skill.name}</td>
+                      <td className="py-4 px-6 text-gray-600 dark:text-slate-300 dark:text-slate-300">{skill.description || '—'}</td>
+                      <td className="py-4 px-6 text-center">
+                        <div className="flex items-center justify-center gap-3">
+                          <button
+                            onClick={() => handleEditSkill(skill)}
+                            className="text-blue-600 hover:text-blue-800 transition-colors"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSkill(skill.id)}
+                            className="text-red-600 hover:text-red-800 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {filteredSkills.length > 0 && (
+            <Pagination
+              currentPage={skillsCurrentPage}
+              totalPages={skillsTotalPages}
+              onPageChange={setSkillsCurrentPage}
+              totalItems={filteredSkills.length}
+              itemsPerPage={itemsPerPageSkills}
+            />
+          )}
+        </div>
+      )}
+
       {/* Модальное окно списка ставок */}
       <Modal
         isOpen={isHourlyRateModalOpen}
@@ -1224,6 +1402,38 @@ export default function EmployeesPage() {
           <p className="text-red-500 text-lg">{error}</p>
         </div>
       )}
+
+      {/* Модальное окно навыков */}
+      <Modal
+        isOpen={isSkillModalOpen}
+        onClose={() => { setIsSkillModalOpen(false); setEditingSkill(null); }}
+        title={editingSkill ? 'Редактировать навык' : 'Новый навык'}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Название</label>
+            <input ref={skillNameRef} type="text" className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]" placeholder="Например: Сварка" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Описание</label>
+            <textarea ref={skillDescriptionRef} className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]" rows={3} placeholder="Опциональное описание" />
+          </div>
+          <div className="flex gap-4 pt-4">
+            <button
+              onClick={handleSaveSkill}
+              className="flex-1 bg-[#1976d2] hover:bg-[#1565c0] text-white py-3 px-4 rounded-lg font-semibold transition-colors"
+            >
+              Сохранить
+            </button>
+            <button
+              onClick={() => { setIsSkillModalOpen(false); setEditingSkill(null); }}
+              className="flex-1 bg-gray-200 dark:bg-slate-700 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-600 dark:bg-slate-600 text-gray-700 dark:text-slate-300 dark:text-slate-300 py-3 px-4 rounded-lg font-semibold transition-colors"
+            >
+              Отмена
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Модальное окно бригады */}
       <Modal

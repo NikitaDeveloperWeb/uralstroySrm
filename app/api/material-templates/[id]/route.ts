@@ -6,10 +6,10 @@ import { updateMaterialTemplateSchema } from '@/shared/lib/validators';
 // GET /api/material-templates/[id] - получить один шаблон
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const templateId = parseInt(id);
 
     if (isNaN(templateId)) {
@@ -34,10 +34,10 @@ export async function GET(
 // PATCH /api/material-templates/[id] - обновить шаблон
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const templateId = parseInt(id);
 
     if (isNaN(templateId)) {
@@ -79,10 +79,10 @@ export async function PATCH(
 // DELETE /api/material-templates/[id] - удалить шаблон
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const templateId = parseInt(id);
 
     if (isNaN(templateId)) {

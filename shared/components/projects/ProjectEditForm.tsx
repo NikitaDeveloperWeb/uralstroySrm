@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ProjectObjectCardEditModal } from './ProjectObjectCardEditModal';
 import { FormField } from '@/shared/components/ui/FormField';
 import type { Project, Brigade } from '@/shared/types/project';
@@ -10,7 +10,7 @@ interface Props {
   onClose: () => void;
   editForm: Partial<Project>;
   setEditForm: (form: Partial<Project> | ((prev: Partial<Project>) => Partial<Project>)) => void;
-  onSave: () => void;
+  onSave: (data: Partial<Project>) => void;
   brigades: Brigade[];
   clients?: { id: number; name: string }[];
 }
@@ -18,11 +18,24 @@ interface Props {
 export function ProjectEditForm({ isOpen, onClose, editForm, setEditForm, onSave, brigades, clients }: Props) {
   const [activeTab, setActiveTab] = useState<'basic' | 'objectCard'>('basic');
   const [showObjectCardModal, setShowObjectCardModal] = useState(false);
+  
+  // Локальный state для полей формы чтобы избежать потери фокуса
+  const [localForm, setLocalForm] = useState<Partial<Project>>(editForm || {});
+
+  // Обновляем localForm при изменении editForm
+  useEffect(() => {
+    setLocalForm(editForm || {});
+  }, [editForm]);
 
   if (!isOpen) return null;
 
   const inputClasses = 'w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white';
   const gridInputClasses = 'grid grid-cols-2 gap-4';
+
+  // Обновляем localForm при изменении поля
+  const updateField = (field: string, value: string | number | null | undefined) => {
+    setLocalForm((prev) => ({ ...prev, [field]: value }));
+  };
 
   return (
     <>
@@ -53,8 +66,8 @@ export function ProjectEditForm({ isOpen, onClose, editForm, setEditForm, onSave
             <FormField label="Название">
               <input
                 type="text"
-                value={editForm.name || ''}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                value={localForm.name || ''}
+                onChange={(e) => updateField('name', e.target.value)}
                 className={inputClasses}
               />
             </FormField>
@@ -63,16 +76,16 @@ export function ProjectEditForm({ isOpen, onClose, editForm, setEditForm, onSave
               <FormField label="Тип объекта">
                 <input
                   type="text"
-                  value={editForm.type || ''}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, type: e.target.value }))}
+                  value={localForm.type || ''}
+                  onChange={(e) => updateField('type', e.target.value)}
                   className={inputClasses}
                 />
               </FormField>
               <FormField label="Площадь (м²)">
                 <input
                   type="text"
-                  value={editForm.area || ''}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, area: e.target.value }))}
+                  value={localForm.area || ''}
+                  onChange={(e) => updateField('area', e.target.value)}
                   className={inputClasses}
                 />
               </FormField>
@@ -81,8 +94,8 @@ export function ProjectEditForm({ isOpen, onClose, editForm, setEditForm, onSave
             <FormField label="Адрес">
               <input
                 type="text"
-                value={editForm.address || ''}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, address: e.target.value }))}
+                value={localForm.address || ''}
+                onChange={(e) => updateField('address', e.target.value)}
                 className={inputClasses}
               />
             </FormField>
@@ -91,16 +104,16 @@ export function ProjectEditForm({ isOpen, onClose, editForm, setEditForm, onSave
               <FormField label="Стоимость">
                 <input
                   type="number"
-                  value={editForm.cost ?? ''}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, cost: e.target.value ? Number(e.target.value) : undefined }))}
+                  value={localForm.cost ?? ''}
+                  onChange={(e) => updateField('cost', e.target.value ? Number(e.target.value) : undefined)}
                   className={inputClasses}
                 />
               </FormField>
               <FormField label="Дата сдачи">
                 <input
                   type="date"
-                  value={editForm.deadline || ''}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, deadline: e.target.value }))}
+                  value={localForm.deadline || ''}
+                  onChange={(e) => updateField('deadline', e.target.value)}
                   className={inputClasses}
                 />
               </FormField>
@@ -109,8 +122,8 @@ export function ProjectEditForm({ isOpen, onClose, editForm, setEditForm, onSave
             <div className={gridInputClasses}>
               <FormField label="Сложность">
                 <select
-                  value={editForm.complexity || 'средний'}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, complexity: e.target.value }))}
+                  value={localForm.complexity || 'средний'}
+                  onChange={(e) => updateField('complexity', e.target.value)}
                   className={inputClasses}
                 >
                   <option value="легкий">Легкий</option>
@@ -120,8 +133,8 @@ export function ProjectEditForm({ isOpen, onClose, editForm, setEditForm, onSave
               </FormField>
               <FormField label="Статус">
                 <select
-                  value={editForm.status || 'создан'}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, status: e.target.value }))}
+                  value={localForm.status || 'создан'}
+                  onChange={(e) => updateField('status', e.target.value)}
                   className={inputClasses}
                 >
                   <option value="создан">Создан</option>
@@ -134,16 +147,16 @@ export function ProjectEditForm({ isOpen, onClose, editForm, setEditForm, onSave
             <FormField label="Код объекта">
               <input
                 type="text"
-                value={editForm.code || ''}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, code: e.target.value }))}
+                value={localForm.code || ''}
+                onChange={(e) => updateField('code', e.target.value)}
                 className={inputClasses}
               />
             </FormField>
 
             <FormField label="Бригада">
               <select
-                value={editForm.brigadeId ?? ''}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, brigadeId: e.target.value ? Number(e.target.value) : null }))}
+                value={localForm.brigadeId ?? ''}
+                onChange={(e) => updateField('brigadeId', e.target.value ? Number(e.target.value) : null)}
                 className={inputClasses}
               >
                 <option value="">Без бригады</option>
@@ -158,8 +171,8 @@ export function ProjectEditForm({ isOpen, onClose, editForm, setEditForm, onSave
             {clients && clients.length > 0 && (
               <FormField label="Клиент">
                 <select
-                  value={editForm.clientId ?? ''}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, clientId: e.target.value ? Number(e.target.value) : null }))}
+                  value={localForm.clientId ?? ''}
+                  onChange={(e) => updateField('clientId', e.target.value ? Number(e.target.value) : null)}
                   className={inputClasses}
                 >
                   <option value="">Без клиента</option>
@@ -176,16 +189,16 @@ export function ProjectEditForm({ isOpen, onClose, editForm, setEditForm, onSave
               <FormField label="Сумма предоплаты">
                 <input
                   type="number"
-                  value={editForm.prepayment ?? ''}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, prepayment: e.target.value ? Number(e.target.value) : null }))}
+                  value={localForm.prepayment ?? ''}
+                  onChange={(e) => updateField('prepayment', e.target.value ? Number(e.target.value) : null)}
                   className={inputClasses}
                 />
               </FormField>
               <FormField label="Дата предоплаты">
                 <input
                   type="date"
-                  value={editForm.prepaymentDate || ''}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, prepaymentDate: e.target.value }))}
+                  value={localForm.prepaymentDate || ''}
+                  onChange={(e) => updateField('prepaymentDate', e.target.value)}
                   className={inputClasses}
                 />
               </FormField>
@@ -196,7 +209,9 @@ export function ProjectEditForm({ isOpen, onClose, editForm, setEditForm, onSave
         {/* Save/Cancel buttons */}
         <div className="flex gap-4 pt-4">
           <button
-            onClick={onSave}
+            onClick={() => {
+              onSave(localForm);
+            }}
             className="flex-1 bg-[#1976d2] hover:bg-[#1565c0] text-white py-3 px-4 rounded-lg font-semibold transition-colors"
           >
             Сохранить

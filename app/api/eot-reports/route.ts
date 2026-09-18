@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse } from '@/shared/lib/api-response';
 
+// GET /api/eot-reports - получить все отчеты или по дате
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -28,28 +29,40 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// POST /api/eot-reports - создать/обновить отчет по дате
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { date } = body;
 
     if (!date) {
-      return errorResponse('Specify date', 400);
+      return errorResponse('Укажите дату', 400);
     }
 
     const [y, m, d] = date.split('-').map(Number);
+    // Создаем дату в локальном времени (не UTC)
     const targetDate = new Date(y, m - 1, d, 0, 0, 0, 0);
     const nextDate = new Date(y, m - 1, d + 1, 0, 0, 0, 0);
+
+    console.log(`[EOT POST] date input: ${date}`);
+    console.log(`[EOT POST] targetDate: ${targetDate.toISOString()}`);
+    console.log(`[EOT POST] nextDate: ${nextDate.toISOString()}`);
 
     const schedules = await prisma.schedule.findMany({
       where: {
         date: { gte: targetDate, lt: nextDate },
+        hours: { gt: 0 },
       },
       include: { employee: { include: { hourlyRate: true } } },
     });
 
+    console.log(`[EOT POST] Date: ${targetDate.toISOString().split('T')[0]}, schedules count: ${schedules.length}`);
+    schedules.forEach(s => {
+      console.log(`[EOT POST]   Employee ${s.employee.fullName}: hours=${s.hours}`);
+    });
+
     if (schedules.length === 0) {
-      return errorResponse('No shifts for this date', 400);
+      return errorResponse('Нет смен за эту дату', 400);
     }
 
     const employeeMap = new Map();
@@ -63,6 +76,11 @@ export async function POST(request: NextRequest) {
           employee: sched.employee,
         });
       }
+    }
+
+    console.log(`[EOT POST] Aggregated hours:`);
+    for (const [empId, data] of employeeMap) {
+      console.log(`[EOT POST]   Employee ${data.employee.fullName}: total hours=${data.hours}`);
     }
 
     const items = [];
@@ -169,6 +187,6 @@ export async function POST(request: NextRequest) {
     return successResponse(eotReport, 201);
   } catch (error) {
     console.error('POST /api/eot-reports error:', error);
-    return errorResponse('Failed to create EOT', 500);
+    return errorResponse('Не удалось создать ЕОТ', 500);
   }
 }

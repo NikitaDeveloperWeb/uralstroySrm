@@ -20,11 +20,11 @@ export default function MaterialsPage() {
   const { confirm } = useAlert();
 
   useEffect(() => {
-    fetchMaterials();
-  }, [fetchMaterials]);
+    // Загружаем все материалы без пагинации
+    fetchMaterials(1, 1000, activeTab);
+  }, [activeTab, fetchMaterials]);
 
   const filteredMaterials = materials
-    .filter((m) => m.status === activeTab)
     .filter((m) =>
       m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.category.toLowerCase().includes(searchQuery.toLowerCase())
@@ -77,6 +77,13 @@ export default function MaterialsPage() {
         onEdit={handleEdit}
         onDelete={handleDelete}
       />
+
+      {/* Информация о количестве */}
+      {materials.length > 0 && (
+        <div className="text-center py-2 text-sm text-gray-500 dark:text-slate-400">
+          Всего материалов: {materials.length}
+        </div>
+      )}
 
       <MaterialForm
         isOpen={isFormOpen}

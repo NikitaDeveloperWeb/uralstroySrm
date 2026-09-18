@@ -6,10 +6,10 @@ import { updateFinanceReportSchema } from '@/shared/lib/validators';
 // GET /api/finance-reports/[id] - получить финансовый отчет по ID
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const report = await prisma.financeReport.findUnique({
       where: { id: Number(id) },
       include: {
@@ -31,10 +31,10 @@ export async function GET(
 // PATCH /api/finance-reports/[id] - обновить финансовый отчет
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
     const validated = updateFinanceReportSchema.parse(body);
 
@@ -56,10 +56,10 @@ export async function PATCH(
 // DELETE /api/finance-reports/[id] - удалить финансовый отчет
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     await prisma.financeReport.delete({
       where: { id: Number(id) },

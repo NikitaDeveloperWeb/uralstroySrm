@@ -5,10 +5,10 @@ import { successResponse, errorResponse, handlePrismaError } from '@/shared/lib/
 // DELETE /api/unit-rates/[id] - удалить расценку
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const numericId = parseInt(id, 10);
     if (isNaN(numericId)) {
       return errorResponse('Некорректный ID', 400);

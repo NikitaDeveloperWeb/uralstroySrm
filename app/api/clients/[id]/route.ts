@@ -6,10 +6,10 @@ import { updateClientSchema } from '@/shared/lib/validators';
 // GET /api/clients/[id] - получить клиента по ID
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const client = await prisma.client.findUnique({
       where: { id: Number(id) },
       include: {
@@ -31,10 +31,10 @@ export async function GET(
 // PATCH /api/clients/[id] - обновить клиента
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
     const validated = updateClientSchema.parse(body);
 
@@ -56,10 +56,10 @@ export async function PATCH(
 // DELETE /api/clients/[id] - удалить клиента
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     await prisma.client.delete({
       where: { id: Number(id) },

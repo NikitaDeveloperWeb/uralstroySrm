@@ -96,39 +96,67 @@ function ObjectDetailPageInner() {
   const materialsRef = useRef(materials);
   materialsRef.current = materials;
 
+  // Ref для актуальных данных материалов (для сохранения)
+  const materialsDataRef = useRef<any[]>([]);
+
+  // Получение локальных данных из таблицы
+  const handleMaterialsLocalData = useCallback((data: any[]) => {
+    materialsDataRef.current = data;
+  }, []);
+
   const [overheads, setOverheads] = useState<OverheadItem[]>([]);
   const [editOverheads, setEditOverheads] = useState<OverheadItem[]>([]);
   const [overheadTemplates, setOverheadTemplates] = useState<TemplateItem[]>([]);
   const [savingOverheads, setSavingOverheads] = useState(false);
   const [overheadEditIndex, setOverheadEditIndex] = useState<number | null>(null);
 
-  const [materialsData, setMaterialsData] = useState<
-    { id?: number; name: string; quantity: string; cost: number; category: string }[]
-  >([]);
+  // Ref для актуальных данных расходов
+  const overheadsDataRef = useRef<OverheadItem[]>([]);
+
+  // Мемоизированный editItems для таблицы расходов
+  const overheadsEditItems = useMemo(() => {
+    return editOverheads.length > 0 ? editOverheads : overheads;
+  }, [editOverheads, overheads]);
+
+  // Получение локальных данных из таблицы расходов
+  const handleOverheadsLocalData = useCallback((data: OverheadItem[]) => {
+    overheadsDataRef.current = data;
+  }, []);
+
+  const [materialsData, setMaterialsData] = useState<{id?: number; name: string; quantity: string; cost: number; category: string; stage?: string}[]>([] as any);
   const [materialsEditing, setMaterialsEditing] = useState(false);
   const [savingMaterials, setSavingMaterials] = useState(false);
 
   useEffect(() => {
     if (!materialsEditing) {
       setMaterialsData(materials.map((item) => ({
-        id: item.id, name: item.name, quantity: item.quantity, cost: item.cost, category: item.category || '',
+        id: item.id, name: item.name, quantity: item.quantity, cost: item.cost, category: item.category || '', stage: item.stage || '',
       })));
     }
-  }, [materials, materialsEditing]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [materialsEditing]);
 
-  const [worksData, setWorksData] = useState<
-    { id?: number; name: string; quantity: string; cost: number; category: string }[]
-  >([]);
+  const [worksData, setWorksData] = useState<{id?: number; name: string; quantity: string; cost: number; category: string; stage?: string}[]>([] as any);
   const [worksEditing, setWorksEditing] = useState(false);
   const [savingWorks, setSavingWorks] = useState(false);
+  const worksDataRef = useRef<any[]>([]);
+
+  // Получение локальных данных из таблицы работ
+  const handleWorksLocalData = useCallback((data: any[]) => {
+    worksDataRef.current = data;
+  }, []);
 
   useEffect(() => {
     if (!worksEditing) {
       setWorksData(completedWorks.map((item) => ({
-        id: item.id, name: item.name, quantity: item.quantity, cost: item.cost, category: item.category || '',
+        id: item.id, name: item.name, quantity: item.quantity, cost: item.cost, category: item.category || '', stage: item.stage || '',
       })));
     }
   }, [completedWorks, worksEditing]);
+
+  // Обновляем refs при изменении данных
+  useEffect(() => { materialsDataRef.current = materialsData; }, [materialsData]);
+  useEffect(() => { worksDataRef.current = worksData; }, [worksData]);
 
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     info: false,
@@ -161,11 +189,15 @@ function ObjectDetailPageInner() {
   };
 
   // ─── Save ───────────────────────────────────────────────────────
-  const saveOverheads = async (items: OverheadItem[]) => {
+  const saveOverheads = async () => {
+    const items = overheadsDataRef.current;
     if (!project || items.length === 0) return;
     setSavingOverheads(true);
     try {
       for (const oh of items) {
+        // Пропускаем пустые строки
+        if (!oh.name && oh.cost === 0) continue;
+        
         if (oh.id) {
           await fetch(`/api/project-overheads/${oh.id}`, {
             method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -191,7 +223,7 @@ function ObjectDetailPageInner() {
     }
   };
 
-  const handleOverheadRowChange = useCallback((i: number, field: string, value: string | number | null) => {
+  const handleOverheadRowChange = useCallback((i: number, field: string, value: string | number | null | undefined) => {
     setEditOverheads(prev => {
       const copy = [...prev];
       copy[i] = { ...copy[i], [field]: value };
@@ -204,7 +236,8 @@ function ObjectDetailPageInner() {
   }, []);
 
   const handleMaterialsSave = async () => {
-    if (!project || materialsData.length === 0) {
+    const currentMaterialsData = materialsDataRef.current;
+    if (!project || currentMaterialsData.length === 0) {
       setMaterialsEditing(false); return;
     }
     setSavingMaterials(true);
@@ -212,33 +245,35 @@ function ObjectDetailPageInner() {
       const currentMaterials = materialsRef.current;
       const existingIds = new Set(currentMaterials.map(m => m.id));
       
-      for (const mat of materialsData) {
+      // Сохраняем только непустые строки
+      const validMaterials = currentMaterialsData.filter(m => m.name || m.quantity);
+      
+      for (const mat of validMaterials) {
         if (mat.id && existingIds.has(mat.id)) {
           await fetch(`/api/material-estimates/${mat.id}`, {
             method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: mat.name, quantity: mat.quantity, cost: mat.cost, category: mat.category || null }),
+            body: JSON.stringify({ name: mat.name, quantity: mat.quantity, cost: mat.cost, category: mat.category || null, stage: mat.stage || null }),
           }).catch(() => {});
         } else if (!mat.id) {
           await fetch('/api/material-estimates', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ projectId: project.id, name: mat.name, quantity: mat.quantity, cost: mat.cost, category: mat.category || null }),
+            body: JSON.stringify({ projectId: project.id, name: mat.name, quantity: mat.quantity, cost: mat.cost, category: mat.category || null, stage: mat.stage || null }),
           }).catch(() => {});
         }
       }
       
+      // Удаляем удалённые строки
       for (const cm of currentMaterials) {
-        if (cm.id && !materialsData.some(m => m.id === cm.id)) {
+        if (cm.id && !currentMaterialsData.some(m => m.id === cm.id)) {
           await fetch(`/api/material-estimates/${cm.id}`, { method: 'DELETE' }).catch(() => {});
         }
       }
       
       await fetchProjectMaterials(project.id);
-      setMaterialsData(useProjectStore.getState().materials.map((item) => ({
-        id: item.id, name: item.name, quantity: item.quantity, cost: item.cost, category: item.category || '',
-      })));
       setMaterialsEditing(false);
     } catch (error) {
       console.error('Ошибка сохранения материалов:', error);
+      setMaterialsEditing(false);
     } finally {
       setSavingMaterials(false);
     }
@@ -248,35 +283,36 @@ function ObjectDetailPageInner() {
     if (!project) {
       setWorksEditing(false); return;
     }
+    const currentWorksData = worksDataRef.current;
     setSavingWorks(true);
     try {
       const currentWorks = useProjectStore.getState().completedWorks;
       const currentIds = new Set(currentWorks.map(w => w.id));
       
-      for (const work of worksData) {
+      for (const work of currentWorksData) {
+        // Пропускаем пустые строки
+        if (!work.name && !work.quantity) continue;
+        
         if (work.id) {
           await fetch(`/api/completed-works/${work.id}`, {
             method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: work.name, quantity: work.quantity, cost: work.cost }),
+            body: JSON.stringify({ name: work.name, quantity: work.quantity, cost: work.cost, category: work.category || null, stage: work.stage || null }),
           }).catch(() => {});
         } else {
           await fetch('/api/completed-works', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ projectId: project.id, name: work.name, quantity: work.quantity, cost: work.cost }),
+            body: JSON.stringify({ projectId: project.id, name: work.name, quantity: work.quantity, cost: work.cost, category: work.category || null, stage: work.stage || null }),
           }).catch(() => {});
         }
       }
       
       for (const cw of currentWorks) {
-        if (cw.id && !worksData.some(w => w.id === cw.id)) {
+        if (cw.id && !currentWorksData.some(w => w.id === cw.id)) {
           await fetch(`/api/completed-works/${cw.id}`, { method: 'DELETE' }).catch(() => {});
         }
       }
       
       await fetchProjectCompletedWorks(project.id);
-      setWorksData(useProjectStore.getState().completedWorks.map((item) => ({
-        id: item.id, name: item.name, quantity: item.quantity, cost: item.cost, category: item.category || '',
-      })));
       setWorksEditing(false);
     } finally {
       setSavingWorks(false);
@@ -300,6 +336,7 @@ function ObjectDetailPageInner() {
           quantity: quantityStr,
           cost: cost,
           category: material.category,
+          stage: '',
         }),
       });
       
@@ -313,6 +350,7 @@ function ObjectDetailPageInner() {
           quantity: savedMaterial.quantity,
           cost: savedMaterial.cost,
           category: savedMaterial.category || '',
+          stage: savedMaterial.stage || '',
         };
         
         setMaterialsData(prev => [...prev, newItem]);
@@ -401,8 +439,8 @@ function ObjectDetailPageInner() {
   };
 
   const handleEdit = () => { if (project) { setEditForm({ ...project }); setShowEditModal(true); } };
-  const handleSaveEdit = async () => { if (project) { await updateProject(project.id, editForm); setShowEditModal(false); setEditForm({}); } };
-  const handleObjectCardSave = async () => { if (project) { await updateProject(project.id, editForm); setShowObjectCardEditModal(false); } };
+  const handleSaveEdit = async (data: Partial<Project>) => { if (project) { await updateProject(project.id, data); setShowEditModal(false); setEditForm({}); } };
+  const handleObjectCardSave = async (data: Partial<Project>) => { if (project) { await updateProject(project.id, data); setShowObjectCardEditModal(false); } };
   const handleStatusChange = async (status: string) => { if (project) { await updateProject(project.id, { status }); } };
 
   // ─── Effects ────────────────────────────────────────────────────
@@ -466,7 +504,7 @@ function ObjectDetailPageInner() {
     setShowMaterialsModal(true);
     const currentMaterials = materialsRef.current;
     setMaterialsData(currentMaterials.map((m) => ({
-      id: m.id, name: m.name, quantity: m.quantity, cost: m.cost, category: m.category || '',
+      id: m.id, name: m.name, quantity: m.quantity, cost: m.cost, category: m.category || '', stage: m.stage || '',
     })));
     setMaterialsEditing(false);
   }, []);
@@ -474,7 +512,7 @@ function ObjectDetailPageInner() {
   const handleOpenWorks = useCallback(() => {
     setShowWorkModal(true);
     setWorksData(completedWorks.map((item) => ({
-      id: item.id, name: item.name, quantity: item.quantity, cost: item.cost, category: item.category || '',
+      id: item.id, name: item.name, quantity: item.quantity, cost: item.cost, category: item.category || '', stage: item.stage || '',
     })));
     setWorksEditing(false);
   }, [completedWorks]);
@@ -512,30 +550,11 @@ function ObjectDetailPageInner() {
     setMaterialsEditing(true);
   }, []);
 
-  const handleMaterialAddRow = useCallback(async () => {
+  const handleMaterialAddRow = useCallback(() => {
     if (!project) return;
-    const tempId = Date.now();
-    setMaterialsData(prev => [...prev, { id: tempId, name: '', quantity: '', cost: 0, category: '' }]);
-    
-    try {
-      const res = await fetch('/api/material-estimates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId: project.id, name: '', quantity: '', cost: 0, category: null }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const saved = data.data;
-        setMaterialsData(prev => prev.map(m => m.id === tempId ? { ...m, id: saved.id } : m));
-        await fetchProjectMaterials(project.id);
-        setMaterialsData(useProjectStore.getState().materials.map((item) => ({
-          id: item.id, name: item.name, quantity: item.quantity, cost: item.cost, category: item.category || '',
-        })));
-      }
-    } catch (e) {
-      console.error('Failed to add material:', e);
-    }
-  }, [project, fetchProjectMaterials]);
+    const tempUid = Date.now();
+    setMaterialsData(prev => [...prev, { id: undefined, _uid: tempUid, name: '', quantity: '', cost: 0, category: '', stage: '' }]);
+  }, [project]);
 
   const handleMaterialCancel = useCallback(() => {
     setMaterialsEditing(false);
@@ -559,30 +578,11 @@ function ObjectDetailPageInner() {
     });
   }, []);
 
-  const handleWorkAddRow = useCallback(async () => {
+  const handleWorkAddRow = useCallback(() => {
     if (!project) return;
-    const tempId = Date.now();
-    setWorksData(prev => [...prev, { id: tempId, name: '', quantity: '', cost: 0, category: '' }]);
-    
-    try {
-      const res = await fetch('/api/completed-works', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId: project.id, name: '', quantity: '', cost: 0 }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const saved = data.data;
-        setWorksData(prev => prev.map(w => w.id === tempId ? { ...w, id: saved.id } : w));
-        await fetchProjectCompletedWorks(project.id);
-        setWorksData(prev => useProjectStore.getState().completedWorks.map((item) => ({
-          id: item.id, name: item.name, quantity: item.quantity, cost: item.cost, category: item.category || '',
-        })));
-      }
-    } catch (e) {
-      console.error('Failed to add work:', e);
-    }
-  }, [project, fetchProjectCompletedWorks]);
+    const tempUid = Date.now();
+    setWorksData(prev => [...prev, { id: undefined, _uid: tempUid, name: '', quantity: '', cost: 0, category: '', stage: '' }]);
+  }, [project]);
 
   const handleWorkEdit = useCallback(() => {
     setWorksData(completedWorks.map((item) => ({
@@ -592,7 +592,8 @@ function ObjectDetailPageInner() {
   }, [completedWorks]);
 
   const handleOverheadAddRow = useCallback(() => {
-    setEditOverheads(prev => [...prev, { name: '', cost: 0, category: null }]);
+    const tempUid = Date.now();
+    setEditOverheads(prev => [...prev, { id: undefined, _uid: tempUid, name: '', cost: 0, category: null }]);
   }, []);
 
   const handleOverheadEdit = useCallback((i: number) => {
@@ -601,10 +602,10 @@ function ObjectDetailPageInner() {
   }, [overheads]);
 
   const handleOverheadSave = useCallback(async () => {
-    await saveOverheads(editOverheads);
+    await saveOverheads();
     setOverheadEditIndex(null);
     setEditOverheads([]);
-  }, [editOverheads, saveOverheads]);
+  }, [saveOverheads]);
 
   const handleOverheadCancel = useCallback(() => {
     setOverheadEditIndex(null);
@@ -862,6 +863,7 @@ function ObjectDetailPageInner() {
           isSaving={savingMaterials}
           materials={warehouseMaterials}
           onApplyMaterial={handleApplyMaterial}
+          getLocalData={handleMaterialsLocalData}
         />
       </Modal>
 
@@ -882,6 +884,7 @@ function ObjectDetailPageInner() {
           onRemoveRow={handleWorkRemoveRow}
           onRowChange={handleWorkRowChange}
           isSaving={savingWorks}
+          getLocalData={handleWorksLocalData}
         />
       </Modal>
 
@@ -893,7 +896,7 @@ function ObjectDetailPageInner() {
       >
         <OverheadTable
           items={overheads}
-          editItems={editOverheads.length > 0 ? editOverheads : overheads}
+          editItems={overheadsEditItems}
           editIndex={overheadEditIndex}
           onExportExcel={handleExportOverheadsExcel}
           onOpenTemplate={handleOverheadTemplatePickerOpen}
@@ -904,6 +907,7 @@ function ObjectDetailPageInner() {
           onRemoveRow={handleOverheadRemoveRow}
           onRowChange={handleOverheadRowChange}
           isSaving={savingOverheads}
+          getLocalData={handleOverheadsLocalData}
         />
       </Modal>
 

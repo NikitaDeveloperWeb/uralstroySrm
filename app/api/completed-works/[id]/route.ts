@@ -6,10 +6,10 @@ import { updateCompletedWorkSchema } from '@/shared/lib/validators';
 // PATCH /api/completed-works/[id] - обновить отдельную запись
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const numericId = parseInt(id, 10);
     if (isNaN(numericId)) {
       return errorResponse('Некорректный ID', 400);
@@ -30,6 +30,7 @@ export async function PATCH(
         quantity: validated.quantity ?? existing.quantity,
         cost: validated.cost ?? existing.cost,
         category: validated.category ?? existing.category,
+        stage: validated.stage ?? existing.stage,
       },
       include: { project: true },
     });
@@ -46,10 +47,10 @@ export async function PATCH(
 // DELETE /api/completed-works/[id] - удалить запись
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const numericId = parseInt(id, 10);
     if (isNaN(numericId)) {
       return errorResponse('Некорректный ID', 400);

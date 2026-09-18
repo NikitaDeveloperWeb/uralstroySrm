@@ -62,7 +62,7 @@ export async function exportReportsToPDF(reports: ReportEntry[]) {
     html += `
       <div style="margin-bottom: 12px; page-break-inside: avoid; font-size: 9px;">
         <div style="background: #1976d2; color: white; padding: 5px; border-radius: 3px; margin-bottom: 6px; font-size: 9px;">
-          <strong>${report.type === 'цех' ? 'Отчет цеха' : report.type}</strong>
+          <strong>${report.type === 'цех' ? 'Отчет о выполненной работе' : report.type}</strong>
         </div>
         <div style="margin-bottom: 5px; font-size: 9px;">
           <span style="color: #666;">Отчет №${report.id}</span>

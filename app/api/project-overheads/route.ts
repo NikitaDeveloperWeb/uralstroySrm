@@ -36,14 +36,18 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const validated = createSchema.parse(body);
+
+    const projectId = Number(body.projectId);
+    if (!projectId) {
+      return errorResponse('Не указан projectId', 400);
+    }
 
     const overhead = await prisma.projectOverhead.create({
       data: {
-        projectId: validated.projectId,
-        name: validated.name,
-        cost: validated.cost,
-        category: validated.category,
+        projectId,
+        name: body.name || '',
+        cost: Number(body.cost) || 0,
+        category: body.category || null,
       },
     });
 

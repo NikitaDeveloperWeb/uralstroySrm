@@ -6,10 +6,10 @@ import { updateBrigadeSchema } from '@/shared/lib/validators';
 // GET /api/brigades/[id] - получить бригаду по ID
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const brigade = await prisma.brigade.findUnique({
       where: { id: Number(id) },
       include: {
@@ -32,10 +32,10 @@ export async function GET(
 // PATCH /api/brigades/[id] - обновить бригаду
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
     const validated = updateBrigadeSchema.parse(body);
 
@@ -63,10 +63,10 @@ export async function PATCH(
 // DELETE /api/brigades/[id] - удалить бригаду
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     await prisma.brigade.delete({
       where: { id: Number(id) },

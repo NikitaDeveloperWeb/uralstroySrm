@@ -29,6 +29,29 @@ export async function GET(request: NextRequest) {
 
 // PATCH /api/completed-works - bulk update (replace all for projectId)
 export async function PATCH(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  // Individual record update
+  if (id) {
+    try {
+      const body = await request.json();
+      const validated = updateCompletedWorkSchema.parse(body);
+
+      const work = await prisma.completedWork.update({
+        where: { id: Number(id) },
+        data: validated,
+        include: { project: true },
+      });
+
+      return successResponse(work);
+    } catch (error) {
+      console.error('PATCH /api/completed-works/:id error:', error);
+      return handlePrismaError(error);
+    }
+  }
+
+  // Bulk update (replace all for projectId)
   try {
     const body = await request.json();
     const { projectId, works } = body;
@@ -50,6 +73,7 @@ export async function PATCH(request: NextRequest) {
         quantity: w.quantity,
         cost: w.cost,
         category: w.category || null,
+        stage: w.stage || null,
       })),
     });
 
@@ -71,10 +95,18 @@ export async function PATCH(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const validated = createCompletedWorkSchema.parse(body);
+    console.log('POST /api/completed-works body:', body);
 
+    // Создаём запись без строгой валидации (для временных записей с пустыми полями)
     const work = await prisma.completedWork.create({
-      data: validated,
+      data: {
+        projectId: body.projectId,
+        name: body.name || '',
+        quantity: body.quantity || '',
+        cost: body.cost || 0,
+        category: body.category || null,
+        stage: body.stage || null,
+      },
       include: {
         project: true,
       },
@@ -83,6 +115,30 @@ export async function POST(request: NextRequest) {
     return successResponse(work, 201);
   } catch (error) {
     console.error('POST /api/completed-works error:', error);
+    if (error instanceof Error && 'issues' in error) {
+      return errorResponse('Некорректные данные: ' + JSON.stringify(error), 400);
+    }
+    return handlePrismaError(error);
+  }
+}
+
+// DELETE /api/completed-works/:id
+export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
+  if (!id) {
+    return errorResponse('ID не указан', 400);
+  }
+
+  try {
+    await prisma.completedWork.delete({
+      where: { id: Number(id) },
+    });
+
+    return successResponse({ message: 'Запись удалена' });
+  } catch (error) {
+    console.error('DELETE /api/completed-works/:id error:', error);
     return handlePrismaError(error);
   }
 }

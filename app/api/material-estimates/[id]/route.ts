@@ -38,10 +38,11 @@ export async function PATCH(
     const estimate = await prisma.materialEstimate.update({
       where: { id: numericId },
       data: {
-        name: validated.name ?? existing.name,
-        quantity: validated.quantity ?? existing.quantity,
-        cost: validated.cost ?? existing.cost,
-        category: validated.category ?? existing.category,
+        name: validated.name !== undefined ? validated.name : existing.name,
+        quantity: validated.quantity !== undefined ? validated.quantity : existing.quantity,
+        cost: validated.cost !== undefined ? validated.cost : existing.cost,
+        category: validated.category !== undefined ? validated.category : existing.category,
+        stage: validated.stage !== undefined ? validated.stage : existing.stage,
       },
       include: { project: true },
     });

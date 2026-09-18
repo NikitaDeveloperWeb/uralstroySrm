@@ -6,10 +6,10 @@ import { createProjectTransactionSchema } from '@/shared/lib/validators';
 // GET /api/projects/[id]/transactions - получить все транзакции проекта
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const projectId = parseInt(id);
     
     if (isNaN(projectId)) {
@@ -31,10 +31,10 @@ export async function GET(
 // POST /api/projects/[id]/transactions - создать новую транзакцию
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const projectId = parseInt(id);
     
     if (isNaN(projectId)) {

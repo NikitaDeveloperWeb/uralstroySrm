@@ -6,10 +6,10 @@ import { updateProjectTransactionSchema } from '@/shared/lib/validators';
 // PATCH /api/projects/[id]/transactions/[transactionId] - обновить транзакцию
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; transactionId: string }> }
+  context: any
 ) {
   try {
-    const { id, transactionId: transactionIdStr } = await params;
+    const { id, transactionId: transactionIdStr } = await context.params;
     const projectId = parseInt(id);
     const transactionId = parseInt(transactionIdStr);
     
@@ -82,10 +82,10 @@ export async function PATCH(
 // DELETE /api/projects/[id]/transactions/[transactionId] - удалить транзакцию
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string; transactionId: string }> }
+  context: any
 ) {
   try {
-    const { id, transactionId: transactionIdStr } = await params;
+    const { id, transactionId: transactionIdStr } = await context.params;
     const projectId = parseInt(id);
     const transactionId = parseInt(transactionIdStr);
     

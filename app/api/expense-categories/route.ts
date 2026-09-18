@@ -43,10 +43,10 @@ export async function POST(request: NextRequest) {
 // PATCH /api/expense-categories/:id
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
     const validated = createExpenseCategorySchema.partial().parse(body);
 
@@ -65,10 +65,10 @@ export async function PATCH(
 // DELETE /api/expense-categories/:id
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     await prisma.expenseCategory.delete({
       where: { id: Number(id) },

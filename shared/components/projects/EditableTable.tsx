@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, memo } from 'react';
 import { Pencil, Plus, Trash2, Save, X, CheckCircle, Clock, Search, FileText } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Button } from '@/shared/components/ui/button';
@@ -8,10 +8,17 @@ import { Modal } from '@/shared/components/ui/Modal';
 
 interface TableRow {
   id?: number;
+  _uid?: number;
   name?: string;
   quantity: string;
   cost: number;
   category?: string | null;
+  stage?: string | null;
+}
+
+function parseQuantity(q: string): number {
+  const match = String(q).match(/[\d.]+/);
+  return match ? parseFloat(match[0]) : 0;
 }
 
 interface Material {
@@ -44,25 +51,87 @@ interface EditableTableProps<T extends TableRow> {
   materials?: Material[];
   onApplyMaterial?: (material: Material) => void;
   useWarehousePicker?: boolean;
+  getLocalData?: (data: T[]) => void;
 }
+
+const EditableTableRow = memo(function EditableTableRow({
+  item, i, editIndex, itemName, registerInput, handleLocalRowChange, onRemoveRow, rowTotal,
+}: {
+  item: TableRow;
+  i: number;
+  editIndex: number | null;
+  itemName: string;
+  registerInput: (key: string, el: HTMLInputElement | null) => void;
+  handleLocalRowChange: (i: number, field: string | number | symbol, value: any) => void;
+  onRemoveRow: (index: number) => void;
+  rowTotal: (item: TableRow) => number;
+}) {
+  const rowKey = item.id !== undefined ? `edit-${item.id}` : `edit-temp-${item._uid || i}`;
+  return (
+    <tr key={rowKey} className={`border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700 ${editIndex === i ? 'bg-blue-50 ring-2 ring-blue-300' : ''}`}>
+      <td className="py-3 px-4 text-gray-400 dark:text-slate-500 text-sm">{i + 1}</td>
+      <td className="py-3 px-4">
+        <input ref={(el) => registerInput(`${rowKey}-${itemName}`, el)} value={(item as any)[itemName] as string || ''} onChange={(e) => handleLocalRowChange(i, itemName, e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </td>
+      <td className="py-3 px-4">
+        <input ref={(el) => registerInput(`${rowKey}-category`, el)} value={item.category || ''} onChange={(e) => handleLocalRowChange(i, 'category', e.target.value)} placeholder="Категория" className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </td>
+      <td className="py-3 px-4">
+        <input ref={(el) => registerInput(`${rowKey}-quantity`, el)} value={item.quantity || ''} onChange={(e) => handleLocalRowChange(i, 'quantity', e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center" />
+      </td>
+      <td className="py-3 px-4">
+        <input ref={(el) => registerInput(`${rowKey}-stage`, el)} value={(item as any).stage || ''} onChange={(e) => handleLocalRowChange(i, 'stage', e.target.value)} placeholder="Этап" className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
+      </td>
+      <td className="py-3 px-4 text-right">
+        <input ref={(el) => registerInput(`${rowKey}-cost`, el)} type="number" value={item.cost || 0} onChange={(e) => handleLocalRowChange(i, 'cost', Number(e.target.value))} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
+      </td>
+      <td className="py-3 px-4 text-right font-bold text-[#1976d2]">{rowTotal(item).toLocaleString('ru-RU')} ₽</td>
+      <td className="py-3 px-4 text-center">
+        <button onClick={() => onRemoveRow(i)} className="text-red-600 hover:text-red-800" title="Удалить строку"><Trash2 className="w-4 h-4" /></button>
+      </td>
+    </tr>
+  );
+});
 
 export function EditableTable<T extends TableRow>({
   items, editItems, editIndex, title, itemName,
   onExportExcel, onOpenTemplate, onAddRow, onEdit, onSave, onCancel,
   onRemoveRow, onRowChange, onDeleteRow, isSaving, materials, onApplyMaterial, useWarehousePicker = false,
+  getLocalData,
 }: EditableTableProps<T>) {
   const inputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+  const [localEditItems, setLocalEditItems] = useState<T[]>([]);
 
-  const parseQuantity = (q: string): number => {
-    const match = String(q).match(/[\d.]+/);
-    return match ? parseFloat(match[0]) : 0;
-  };
+  // Синхронизируем локальный стейт при включении режима редактирования
+  useEffect(() => {
+    if (editIndex !== null) {
+      setLocalEditItems(editItems.map(item => ({ ...item })));
+    } else {
+      setLocalEditItems([]);
+    }
+  }, [editIndex]);
+
+  // При вводе обновляем только локальный стейт
+  const handleLocalRowChange = useCallback((i: number, field: string | number | symbol, value: any) => {
+    setLocalEditItems(prev => {
+      const copy = [...prev];
+      copy[i] = { ...copy[i], [field]: value };
+      return copy;
+    });
+  }, []);
+
+  // Передаём локальные данные в parent при сохранении
+  useEffect(() => {
+    if (getLocalData) {
+      getLocalData(localEditItems as T[]);
+    }
+  }, [localEditItems]);
 
   const handleExportExcel = () => {
     const wb = XLSX.utils.book_new();
     const rows: string[][] = [
       [title],
-      ['#', 'Наименование', 'Категория', 'Количество', 'Цена за ед.', 'Сумма'],
+      ['#', 'Наименование', 'Категория', 'Этап', 'Количество', 'Цена за ед.', 'Сумма'],
     ];
     let total = 0;
     editItems.forEach((item, i) => {
@@ -70,12 +139,12 @@ export function EditableTable<T extends TableRow>({
       const price = item.cost || 0;
       const amount = Math.round(qty * price * 100) / 100;
       total += amount;
-      rows.push([String(i + 1), item[itemName as keyof T] as string, item.category || '—', item.quantity, String(price), String(amount)]);
+      rows.push([String(i + 1), item[itemName as keyof T] as string, item.category || '—', (item as any).stage || '—', item.quantity, String(price), String(amount)]);
     });
-    rows.push(['', 'Итого', '', '', '', String(total)]);
+    rows.push(['', 'Итого', '', '', '', '', String(total)]);
 
     const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols'] = [{ wch: 5 }, { wch: 40 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 18 }];
+    ws['!cols'] = [{ wch: 5 }, { wch: 40 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 18 }];
     const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
     const borderStyle = { style: 'thin', color: { rgb: '000000' } };
     for (let R = range.s.r; R <= range.e.r; R++) {
@@ -92,22 +161,6 @@ export function EditableTable<T extends TableRow>({
     XLSX.writeFile(wb, title.replace(/\s+/g, '_') + '.xlsx');
   };
 
-  useEffect(() => {
-    if (editIndex === null) return;
-    const refs = inputRefs.current;
-    editItems.forEach((item, i) => {
-      const key = item.id !== undefined ? `edit-${item.id}` : `edit-new-${i}`;
-      const el = refs.get(key);
-      if (el && document.activeElement !== el) {
-        const val = el.value;
-        el.value = '';
-        requestAnimationFrame(() => { el.value = val; });
-      }
-    });
-  }, [editItems, editIndex]);
-
-
-
   const rowTotal = useCallback((item: T): number => {
     const qty = parseQuantity(item.quantity);
     return Math.round(qty * (item.cost || 0) * 100) / 100;
@@ -123,55 +176,18 @@ export function EditableTable<T extends TableRow>({
   const [materialTab, setMaterialTab] = useState<'in-stock' | 'ordered'>('in-stock');
   const [materialSearch, setMaterialSearch] = useState('');
 
-  const filteredMaterials = (materials || [])
+  // materials может быть массивом или объектом с пагинацией { items: [...], pagination: {...} }
+  const materialsArray: Material[] = Array.isArray(materials) ? materials : (materials as any)?.items || [];
+
+  const filteredMaterials = materialsArray
     .filter(m => m.status === materialTab)
     .filter(m => 
       m.name.toLowerCase().includes(materialSearch.toLowerCase()) ||
       m.category.toLowerCase().includes(materialSearch.toLowerCase())
     );
 
-  const inStockCount = (materials || []).filter(m => m.status === 'in-stock').length;
-  const orderedCount = (materials || []).filter(m => m.status === 'ordered').length;
-
-  const renderRow = useCallback((item: T, i: number) => {
-    if (editIndex !== null) {
-      const key = item.id !== undefined ? `edit-${item.id}` : `edit-new-${i}`;
-      return (
-        <tr key={key} className={`border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700 ${editIndex === i ? 'bg-blue-50 ring-2 ring-blue-300' : ''}`}>
-          <td className="py-3 px-4 text-gray-400 dark:text-slate-500 text-sm">{i + 1}</td>
-          <td className="py-3 px-4">
-            <input ref={(el) => registerInput(`${key}-${itemName}`, el)} value={item[itemName as keyof T] as string || ''} onChange={(e) => onRowChange(i, itemName as keyof T, e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </td>
-          <td className="py-3 px-4">
-            <input ref={(el) => registerInput(`${key}-category`, el)} value={item.category || ''} onChange={(e) => onRowChange(i, 'category', e.target.value)} placeholder="Категория" className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </td>
-          <td className="py-3 px-4">
-            <input ref={(el) => registerInput(`${key}-quantity`, el)} value={item.quantity || ''} onChange={(e) => onRowChange(i, 'quantity', e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center" />
-          </td>
-          <td className="py-3 px-4 text-right">
-            <input ref={(el) => registerInput(`${key}-cost`, el)} type="number" value={item.cost || 0} onChange={(e) => onRowChange(i, 'cost', Number(e.target.value))} className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-right" />
-          </td>
-          <td className="py-3 px-4 text-right font-bold text-[#1976d2]">{rowTotal(editItems[i]!).toLocaleString('ru-RU')} ₽</td>
-          <td className="py-3 px-4 text-center">
-            <button onClick={() => onRemoveRow(i)} className="text-red-600 hover:text-red-800" title="Удалить строку"><Trash2 className="w-4 h-4" /></button>
-          </td>
-        </tr>
-      );
-    }
-    return (
-      <tr key={i} className="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700">
-        <td className="py-3 px-4 text-gray-400 dark:text-slate-500 text-sm">{i + 1}</td>
-        <td className="py-3 px-4 text-gray-900 dark:text-white">{item[itemName as keyof T] as string}</td>
-        <td className="py-3 px-4"><span className="text-gray-600 dark:text-slate-300 text-sm">{item.category || '—'}</span></td>
-        <td className="py-3 px-4 text-center text-gray-600 dark:text-slate-300">{item.quantity}</td>
-        <td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-white">{item.cost?.toLocaleString('ru-RU') || '0'} ₽/ед.</td>
-        <td className="py-3 px-4 text-right font-bold text-[#1976d2]">{rowTotal(item).toLocaleString('ru-RU')} ₽</td>
-        <td className="py-3 px-4 text-center">
-          <button onClick={() => onEdit(i)} className="text-blue-600 hover:text-blue-800" title="Редактировать"><Pencil className="w-4 h-4" /></button>
-        </td>
-      </tr>
-    );
-  }, [editIndex, editItems, itemName, onRowChange, onRemoveRow, onEdit, rowTotal, registerInput]);
+  const inStockCount = materialsArray.filter(m => m.status === 'in-stock').length;
+  const orderedCount = materialsArray.filter(m => m.status === 'ordered').length;
 
   return (
     <div>
@@ -208,7 +224,19 @@ export function EditableTable<T extends TableRow>({
             <Button onClick={onAddRow} variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
               <Plus className="w-4 h-4 mr-2" /> Добавить строку
             </Button>
-            <Button onClick={onSave} className="bg-green-600 hover:bg-green-700 text-white font-semibold" disabled={isSaving}>
+            <Button
+              onClick={() => {
+                localEditItems.forEach((item, i) => {
+                  onRowChange(i, 'name', (item as any)[itemName]);
+                  onRowChange(i, 'quantity', item.quantity);
+                  onRowChange(i, 'cost', item.cost);
+                  onRowChange(i, 'category', item.category || '');
+                  onRowChange(i, 'stage', (item as any).stage || '');
+                });
+                onSave();
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white font-semibold"
+              disabled={isSaving}>
               <Save className="w-4 h-4 mr-2" />{isSaving ? 'Сохранение...' : 'Сохранить'}
             </Button>
             <Button onClick={onCancel} variant="outline" className="border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700">
@@ -224,6 +252,7 @@ export function EditableTable<T extends TableRow>({
             <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-slate-300">{title}</th>
             <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-slate-300 w-32">Категория</th>
             <th className="text-center py-3 px-4 text-sm font-semibold text-gray-700 dark:text-slate-300 w-32">Количество</th>
+            <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700 dark:text-slate-300 w-40">Этап</th>
             <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700 dark:text-slate-300 w-36">Цена за ед. (₽)</th>
             <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700 dark:text-slate-300 w-36">Итого (₽)</th>
             {editIndex !== null && (
@@ -231,10 +260,38 @@ export function EditableTable<T extends TableRow>({
             )}
           </tr>
         </thead>
-        <tbody>{editIndex !== null ? editItems.map(renderRow) : items.map(renderRow)}</tbody>
+        <tbody>{editIndex !== null ? localEditItems.map((item, i) => (
+          <EditableTableRow
+            key={item.id !== undefined ? `edit-${item.id}` : `edit-temp-${item._uid || i}`}
+            item={item as TableRow}
+            i={i}
+            editIndex={editIndex}
+            itemName={itemName}
+            registerInput={registerInput}
+            handleLocalRowChange={handleLocalRowChange}
+            onRemoveRow={onRemoveRow}
+            rowTotal={rowTotal as (item: TableRow) => number}
+          />
+        )) : items.map((item, i) => {
+          const rowKey = item.id != null ? `view-${item.id}` : `view-new-${i}`;
+          return (
+            <tr key={rowKey} className="border-b border-gray-100 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700">
+              <td className="py-3 px-4 text-gray-400 dark:text-slate-500 text-sm">{i + 1}</td>
+              <td className="py-3 px-4 text-gray-900 dark:text-white">{(item as any)[itemName] as string}</td>
+              <td className="py-3 px-4"><span className="text-gray-600 dark:text-slate-300 text-sm">{item.category || '—'}</span></td>
+              <td className="py-3 px-4 text-center text-gray-600 dark:text-slate-300">{item.quantity}</td>
+              <td className="py-3 px-4"><span className="text-gray-600 dark:text-slate-300 text-sm">{(item as any).stage || '—'}</span></td>
+              <td className="py-3 px-4 text-right font-medium text-gray-900 dark:text-white">{item.cost?.toLocaleString('ru-RU') || '0'} ₽/ед.</td>
+              <td className="py-3 px-4 text-right font-bold text-[#1976d2]">{rowTotal(item).toLocaleString('ru-RU')} ₽</td>
+              <td className="py-3 px-4 text-center">
+                <button onClick={() => onEdit(i)} className="text-blue-600 hover:text-blue-800" title="Редактировать"><Pencil className="w-4 h-4" /></button>
+              </td>
+            </tr>
+          );
+        })}</tbody>
         <tfoot>
           <tr className="border-t-2 border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-700">
-            <td className="py-3 px-4 font-bold text-gray-900 dark:text-white" colSpan={5}>Итого</td>
+            <td className="py-3 px-4 font-bold text-gray-900 dark:text-white" colSpan={6}>Итого</td>
             <td className="py-3 px-4 text-right font-bold text-[#1976d2] text-lg">{total.toLocaleString('ru-RU')} ₽</td>
             <td></td>
           </tr>

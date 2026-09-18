@@ -9,76 +9,97 @@ export async function GET() {
     // 1. Доходы vs Расходы по месяцам
     const transactions = await prisma.projectTransaction.findMany({
       where: {
-        createdAt: { gte: sixMonthsAgo },
+        date: { gte: sixMonthsAgo },
       },
       select: {
-        createdAt: true,
+        date: true,
         amount: true,
       },
     });
 
+    const expenses = await prisma.expense.findMany({
+      where: {
+        date: { gte: sixMonthsAgo },
+      },
+      select: {
+        date: true,
+        amount: true,
+        category: true,
+      },
+    });
+
+    console.log('Transactions count (6mo):', transactions.length);
+    console.log('Expenses count (6mo):', expenses.length);
+    if (transactions.length > 0) console.log('Transaction dates:', transactions.slice(0, 5).map(t => t.date));
+    if (expenses.length > 0) console.log('Expense dates:', expenses.slice(0, 5).map(e => e.date));
+
     const monthlyIncomeExpense: any[] = [];
-    const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+    const monthNames = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
     
     for (let i = 0; i < 6; i++) {
       const monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthKey = `${monthDate.getFullYear()}-${String(monthDate.getMonth() + 1).padStart(2, '0')}`;
       
       const monthTransactions = transactions.filter(t => {
-        const tDate = new Date(t.createdAt);
+        const tDate = new Date(t.date);
         return `${tDate.getFullYear()}-${String(tDate.getMonth() + 1).padStart(2, '0')}` === monthKey;
       });
 
+      const monthExpenses = expenses.filter(e => {
+        const eDate = new Date(e.date);
+        return `${eDate.getFullYear()}-${String(eDate.getMonth() + 1).padStart(2, '0')}` === monthKey;
+      });
+
       monthlyIncomeExpense.unshift({
-        month: `${months[monthDate.getMonth()]} ${monthDate.getFullYear()}`,
+        month: `${monthNames[monthDate.getMonth()]} ${monthDate.getFullYear()}`,
         income: monthTransactions.reduce((sum, t) => sum + t.amount, 0),
-        expense: 0,
+        expense: monthExpenses.reduce((sum, e) => sum + e.amount, 0),
       });
     }
 
     // 2. Расходы по категориям
-    const expenses = await prisma.expense.findMany({
-      where: { createdAt: { gte: sixMonthsAgo } },
-      select: { category: true, amount: true },
-    });
-
-    const categoryLabels: Record<string, string> = {
-      'materials': 'Материалы',
-      'equipment': 'Оборудование',
-      'transport': 'Транспорт',
-      'labor': 'Рабочие',
-      'other': 'Прочее',
-      'rent': 'Аренда',
-      'food': 'Питание',
-    };
-
     const expenseByCategoryMap = new Map<string, number>();
     expenses.forEach(e => {
-      expenseByCategoryMap.set(e.category, (expenseByCategoryMap.get(e.category) || 0) + e.amount);
+      const cat = (e.category && e.category.trim()) || 'Прочее';
+      expenseByCategoryMap.set(cat, (expenseByCategoryMap.get(cat) || 0) + e.amount);
     });
 
-    const expenseByCategory = Array.from(expenseByCategoryMap.entries()).map(([name, value]) => ({
-      name: categoryLabels[name] || name,
-      value,
-    }));
+    const expenseByCategory = Array.from(expenseByCategoryMap.entries())
+      .map(([name, value]) => ({
+        name,
+        value,
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    if (expenseByCategory.length === 0) {
+      const allExpenses = await prisma.expense.findMany({
+        select: { category: true, amount: true, date: true },
+        take: 10,
+      });
+      console.log('All expenses sample:', allExpenses);
+    }
 
     // 3. Динамика зарплат
     const salaryReports = await prisma.salaryReport.findMany({
-      where: { createdAt: { gte: sixMonthsAgo } },
-      select: { period: true, totalAmount: true },
+      where: { date: { gte: sixMonthsAgo } },
+      select: { date: true, totalAmount: true },
     });
 
-    const salaryTrend = Array.from(new Set(salaryReports.map(r => r.period))).map(period => ({
-      month: period,
-      amount: salaryReports.filter(r => r.period === period).reduce((sum, r) => sum + r.totalAmount, 0),
-    }));
+    const salaryTrend = salaryReports
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .map(r => ({
+        month: new Date(r.date).toLocaleDateString('ru-RU', { month: 'short', year: 'numeric' }),
+        amount: r.totalAmount,
+      }));
 
-    // 4. Бонусы и штрафы
+    // 4. Бонусы и штрафы за последние 6 месяцев
     const bonuses = await prisma.bonus.aggregate({
+      where: { createdAt: { gte: sixMonthsAgo } },
       _sum: { amount: true },
     });
 
     const penalties = await prisma.penalty.aggregate({
+      where: { createdAt: { gte: sixMonthsAgo } },
       _sum: { amount: true },
     });
 
@@ -105,15 +126,18 @@ export async function GET() {
         id: true,
         name: true,
         cost: true,
-        materials: { select: { cost: true } },
-        completedWorks: { select: { cost: true } },
+        transactions: { select: { amount: true } },
       },
     });
 
-    const projectProfit = projects.map(p => ({
-      project: p.name,
-      profit: p.cost - (p.materials.reduce((s, m) => s + (m.cost || 0), 0) + p.completedWorks.reduce((s, w) => s + (w.cost || 0), 0)),
-    }));
+    const projectProfit = projects.map(p => {
+      const totalIncome = p.transactions.reduce((s, t) => s + t.amount, 0);
+      const totalExpense = p.cost || 0;
+      return {
+        project: p.name,
+        profit: totalIncome - totalExpense,
+      };
+    }).sort((a, b) => b.profit - a.profit);
 
     // 7. Динамика расходов по дням
     const dailyExpenses = await prisma.expense.findMany({
@@ -142,7 +166,7 @@ export async function GET() {
     ]);
 
     const reportsByType = [
-      { name: 'Отчеты цеха', value: shopReportsCount },
+      { name: 'Отчеты о выполненной работе', value: shopReportsCount },
       { name: 'ЕОТ отчеты', value: eotReportsCount },
       { name: 'Отчеты по зарплате', value: salaryReportsCount },
       { name: 'Авансовые отчеты', value: advanceReportsCount },

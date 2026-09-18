@@ -1,23 +1,23 @@
 'use client';
 
-import { Plus, ShoppingCart, Wallet, Users, Clock, PiggyBank, FileText, AlertTriangle, Star, ArrowUpCircle, BarChart3 } from 'lucide-react';
+import { Plus, ShoppingCart, Wallet, Users, Clock, PiggyBank, AlertTriangle, Star, ArrowUpCircle, BarChart3, FileText, HandCoins } from 'lucide-react';
 import { FinanceReportCard } from '@/shared/components/finance/FinanceReportCard';
 
 interface FinanceCardsProps {
   todayExpenses: number;
   totalBalance: number;
   todayIncome: number;
-  eotCount: number;
   onAddExpense: () => void;
   onAddIncome: () => void;
   onViewExpenseReport: () => void;
   onViewAdvance: () => void;
   onViewSalary: () => void;
   onViewEarnings: () => void;
-  onViewEOT: () => void;
   onViewPenalty: () => void;
   onViewBonus: () => void;
   onViewSummary: () => void;
+  onViewEOT: () => void;
+  onViewEmployeeAdvance: () => void;
   onGenerateSalary?: () => void;
   onManageFunds: () => void;
 }
@@ -26,33 +26,21 @@ export function FinanceCards({
   todayExpenses,
   totalBalance,
   todayIncome,
-  eotCount,
   onAddExpense,
   onAddIncome,
   onViewExpenseReport,
   onViewAdvance,
   onViewSalary,
   onViewEarnings,
-  onViewEOT,
   onViewPenalty,
   onViewBonus,
   onViewSummary,
+  onViewEOT,
+  onViewEmployeeAdvance,
   onGenerateSalary,
   onManageFunds,
 }: FinanceCardsProps) {
   const cards = [
-    {
-      id: 'eot',
-      title: 'ЕОТ (Отчет об оплате труда)',
-      description: 'Расчет зарплаты за день: сменные и сдельные сотрудники',
-      icon: <FileText className="w-5 h-5 text-[#1976d2]" />,
-      color: 'bg-blue-50',
-      accentColor: 'bg-blue-500',
-      actionLabel: 'Просмотреть',
-      statLabel: 'Отчетов',
-      statValue: `${eotCount} шт`,
-      onClick: onViewEOT,
-    },
     {
       id: 'expenses',
       title: 'Расходы',
@@ -149,6 +137,30 @@ export function FinanceCards({
       statValue: 'Месяц',
       onClick: onViewSummary,
     },
+    {
+      id: 'eot',
+      title: 'ЕОТ',
+      description: 'Единый отчет об оплате труда',
+      icon: <FileText className="w-5 h-5 text-[#0891b2]" />,
+      color: 'bg-cyan-50',
+      accentColor: 'bg-cyan-500',
+      actionLabel: 'Открыть',
+      statLabel: 'Отчетов',
+      statValue: '—',
+      onClick: onViewEOT,
+    },
+    {
+      id: 'employee-advance',
+      title: 'Подотчетные деньги',
+      description: 'Выдача подотчетов сотрудникам с историей',
+      icon: <HandCoins className="w-5 h-5 text-[#ea580c]" />,
+      color: 'bg-orange-50',
+      accentColor: 'bg-orange-500',
+      actionLabel: 'Открыть',
+      statLabel: 'Активных подотчетов',
+      statValue: '—',
+      onClick: onViewEmployeeAdvance,
+    },
   ];
 
   return (
@@ -171,7 +183,7 @@ export function FinanceCards({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-        {cards.map((card) => (
+        {cards.filter(c => c.id !== 'employee-advance').map((card) => (
           <FinanceReportCard
             key={card.id}
             title={card.title}
@@ -185,6 +197,23 @@ export function FinanceCards({
             statValue={card.statValue}
           />
         ))}
+        {/* Подотчетные - отдельная строка на всю ширину */}
+        <div className="col-span-1 md:col-span-2 xl:col-span-3">
+          {cards.find(c => c.id === 'employee-advance') && (
+            <FinanceReportCard
+              key="employee-advance"
+              title={cards.find(c => c.id === 'employee-advance')!.title}
+              description={cards.find(c => c.id === 'employee-advance')!.description}
+              icon={cards.find(c => c.id === 'employee-advance')!.icon}
+              color={cards.find(c => c.id === 'employee-advance')!.color}
+              accentColor={cards.find(c => c.id === 'employee-advance')!.accentColor}
+              onAction={cards.find(c => c.id === 'employee-advance')!.onClick}
+              actionLabel={cards.find(c => c.id === 'employee-advance')!.actionLabel}
+              statLabel={cards.find(c => c.id === 'employee-advance')!.statLabel}
+              statValue={cards.find(c => c.id === 'employee-advance')!.statValue}
+            />
+          )}
+        </div>
       </div>
     </>
   );

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+    import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse, handlePrismaError } from '@/shared/lib/api-response';
 import { updateProjectSchema } from '@/shared/lib/validators';
@@ -46,10 +46,10 @@ async function updateDefaultWorkEstimate(projectId: number, projectCost: number)
 // GET /api/projects/[id] - получить проект по ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const projectId = parseInt(id);
 
     if (isNaN(projectId)) {
@@ -80,10 +80,10 @@ export async function GET(
 // PATCH /api/projects/[id] - обновить проект
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const projectId = parseInt(id);
 
     if (isNaN(projectId)) {
@@ -92,9 +92,22 @@ export async function PATCH(
 
     const body = await request.json();
     console.log('PATCH /api/projects/[id] body:', JSON.stringify(body, null, 2));
+    
+    // Remove nested relations and metadata that shouldn't be updated via PATCH
+    const { brigade, unitRate, materials, completedWorks, createdAt, updatedAt: _updatedAt, id: _id, ...updateData } = body;
+    
+    // Convert empty strings to null for nullable fields
+    if (updateData.prepaymentDate === '') updateData.prepaymentDate = null;
+    if (updateData.prepayment === '') updateData.prepayment = null;
+    
+    // Convert date string to ISO datetime if needed
+    if (updateData.deadline && typeof updateData.deadline === 'string' && !updateData.deadline.includes('T')) {
+      updateData.deadline = updateData.deadline + 'T00:00:00.000Z';
+    }
+    
     let validated;
     try {
-      validated = updateProjectSchema.parse(body);
+      validated = updateProjectSchema.parse(updateData);
     } catch (e: any) {
       console.error('Zod validation error:', e.errors || e.message);
       if (e.errors) {
@@ -105,7 +118,7 @@ export async function PATCH(
 
     const project = await prisma.project.update({
       where: { id: projectId },
-      data: validated,
+      data: updateData,
       include: {
         brigade: true,
         unitRate: true,
@@ -115,8 +128,8 @@ export async function PATCH(
     });
 
     // Если изменилась стоимость — пересчитываем смету
-    if (validated.cost && validated.cost > 0) {
-      await updateDefaultWorkEstimate(project.id, validated.cost);
+    if (updateData.cost != null && updateData.cost > 0) {
+      await updateDefaultWorkEstimate(project.id, updateData.cost);
       
       const projectWithWorks = await prisma.project.findUnique({
         where: { id: projectId },
@@ -141,35 +154,50 @@ export async function PATCH(
 // DELETE /api/projects/[id] - удалить проект
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const projectId = parseInt(id);
 
     if (isNaN(projectId)) {
       return errorResponse('Некорректный ID проекта', 400);
     }
 
-    // Каскадное удаление связанных записей
-    await prisma.materialEstimate.deleteMany({
-      where: { projectId },
-    });
-    await prisma.completedWork.deleteMany({
-      where: { projectId },
-    });
-    await prisma.projectOverhead.deleteMany({
-      where: { projectId },
-    });
-    await prisma.projectTransaction.deleteMany({
-      where: { projectId },
-    });
-    await prisma.projectReport.deleteMany({
-      where: { projectId },
-    });
-
-    await prisma.project.delete({
-      where: { id: projectId },
+    // Каскадное удаление ВСЕХ связанных записей
+    await prisma.$transaction(async (tx) => {
+      // Сметы
+      await tx.materialEstimate.deleteMany({ where: { projectId } });
+      await tx.completedWork.deleteMany({ where: { projectId } });
+      await tx.projectOverhead.deleteMany({ where: { projectId } });
+      
+      // Финансовые планы и транзакции
+      await tx.financialPlan.deleteMany({ where: { projectId } });
+      await tx.projectTransaction.deleteMany({ where: { projectId } });
+      await tx.projectReport.deleteMany({ where: { projectId } });
+      
+      // Расходы и движения (устанавливаем projectId = null)
+      await tx.expense.updateMany({
+        where: { projectId },
+        data: { projectId: null },
+      });
+      await tx.warehouseMovement.updateMany({
+        where: { projectId },
+        data: { projectId: null },
+      });
+      
+      // Работы сотрудников (устанавливаем projectId = null)
+      await tx.employeeWorkReport.updateMany({
+        where: { projectId },
+        data: { projectId: null },
+      });
+      
+      // Расписания и отчёты
+      await tx.schedule.deleteMany({ where: { projectId } });
+      await tx.shopReport.deleteMany({ where: { projectId } });
+      
+      // Удалить сам проект
+      await tx.project.delete({ where: { id: projectId } });
     });
 
     return successResponse({ message: 'Проект удалён' });

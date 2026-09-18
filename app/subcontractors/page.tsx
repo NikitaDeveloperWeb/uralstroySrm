@@ -282,7 +282,6 @@ export default function SubcontractorsPage() {
   }, [supplierSearchQuery, activeTab]);
 
   const handleSupplierDelete = async (id: number) => {
-    const { confirm } = useAlert();
     if (!(await confirm('Удалить поставщика?'))) return;
     try {
       await fetch(`/api/suppliers/${id}`, { method: 'DELETE' });

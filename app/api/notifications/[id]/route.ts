@@ -6,10 +6,10 @@ import { updateNotificationSchema } from '@/shared/lib/validators';
 // GET /api/notifications/[id] - получить уведомление по ID
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const notification = await prisma.notification.findUnique({
       where: { id: Number(id) },
     });
@@ -28,10 +28,10 @@ export async function GET(
 // PATCH /api/notifications/[id] - обновить уведомление
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
     const validated = updateNotificationSchema.parse(body);
 
@@ -50,10 +50,10 @@ export async function PATCH(
 // DELETE /api/notifications/[id] - удалить уведомление
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     await prisma.notification.delete({
       where: { id: Number(id) },

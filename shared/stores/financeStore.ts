@@ -8,6 +8,9 @@ export interface Expense {
   recipient: string;
   purpose: string;
   category: string;
+  projectId?: number | null;
+  project?: { id: number; name: string } | null;
+  stage?: string | null;
 }
 
 interface AdvanceReportItem {

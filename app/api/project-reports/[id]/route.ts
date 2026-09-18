@@ -6,10 +6,10 @@ import { updateProjectReportSchema } from '@/shared/lib/validators';
 // GET /api/project-reports/[id] - получить отчет по проекту по ID
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const report = await prisma.projectReport.findUnique({
       where: { id: Number(id) },
       include: {
@@ -31,10 +31,10 @@ export async function GET(
 // PATCH /api/project-reports/[id] - обновить отчет по проекту
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
     const validated = updateProjectReportSchema.parse(body);
 
@@ -56,10 +56,10 @@ export async function PATCH(
 // DELETE /api/project-reports/[id] - удалить отчет по проекту
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     await prisma.projectReport.delete({
       where: { id: Number(id) },

@@ -56,7 +56,7 @@ const reportOptions: ReportOption[] = [
   },
   {
     id: 'shop-report',
-    title: 'Отчет цеха',
+    title: 'Отчет о выполненной работе',
     description: 'Отчет о работе цеха: квaдратура, материалы, часы сотрудников',
     icon: <Wrench className="w-8 h-8" />,
     category: 'Производство',

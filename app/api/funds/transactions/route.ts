@@ -34,6 +34,16 @@ export async function POST(request: NextRequest) {
     const validated = createFundTransactionSchema.parse(body);
 
     const transaction = await prisma.$transaction(async (tx) => {
+      // Получаем информацию о фонде
+      const fund = await tx.fund.findUnique({
+        where: { id: validated.fundId },
+        select: { name: true },
+      });
+
+      if (!fund) {
+        throw new Error('Фонд не найден');
+      }
+
       const t = await tx.fundTransaction.create({
         data: {
           fundId: validated.fundId,
@@ -56,6 +66,19 @@ export async function POST(request: NextRequest) {
           balance: { increment: balanceChange },
         },
       });
+
+      // Если пополнение фонда — автоматически создаём Expense
+      if (validated.type === 'income') {
+        await tx.expense.create({
+          data: {
+            date: validated.date,
+            amount: validated.amount,
+            recipient: fund.name,
+            purpose: `Пополнение фонда: ${fund.name}`,
+            category: 'Пополнение фонда',
+          },
+        });
+      }
 
       return t;
     });

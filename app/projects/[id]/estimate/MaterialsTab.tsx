@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { EstimateTable } from '@/shared/components/estimates/EstimateTable';
 import { useMaterialEstimateStore } from '@/shared/stores/materialEstimateStore';
 import type { MaterialTemplate } from '@/shared/stores/materialEstimateStore';
@@ -33,9 +33,14 @@ export function MaterialsTab({ items, templates, onSave, isSaving, projectId }: 
 
   useEffect(() => {
     if (!editing) {
-      setEditItems([...items]);
+      setEditItems(prev => {
+        if (prev.length !== items.length) {
+          return [...items];
+        }
+        return prev;
+      });
     }
-  }, [items, editing]);
+  }, [items.length, editing]);
 
   const handleApplyTemplate = async (template: { name: string; quantity: string; cost: number; category?: string | null }) => {
     if (!editing) {
@@ -48,6 +53,7 @@ export function MaterialsTab({ items, templates, onSave, isSaving, projectId }: 
       quantity: template.quantity,
       cost: template.cost,
       category: template.category,
+      stage: null,
       createdAt: new Date().toISOString(),
     };
     setEditItems((prev) => [...prev, newItem]);
@@ -64,6 +70,7 @@ export function MaterialsTab({ items, templates, onSave, isSaving, projectId }: 
       quantity: `${material.quantity} ${material.unit}`,
       cost: material.cost || 0,
       category: material.category,
+      stage: null,
       createdAt: new Date().toISOString(),
     };
     setEditItems((prev) => [...prev, newItem]);
@@ -83,6 +90,7 @@ export function MaterialsTab({ items, templates, onSave, isSaving, projectId }: 
             quantity: item.quantity,
             cost: item.cost,
             category: item.category || undefined,
+            stage: item.stage || undefined,
           });
         }
       }
@@ -96,6 +104,7 @@ export function MaterialsTab({ items, templates, onSave, isSaving, projectId }: 
               quantity: item.quantity,
               cost: item.cost,
               category: item.category || undefined,
+              stage: item.stage || undefined,
             });
           }
         }
@@ -127,6 +136,7 @@ export function MaterialsTab({ items, templates, onSave, isSaving, projectId }: 
       quantity: '',
       cost: 0,
       category: null,
+      stage: null,
       createdAt: new Date().toISOString(),
     }]);
   };

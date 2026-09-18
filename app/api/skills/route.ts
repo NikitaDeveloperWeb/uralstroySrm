@@ -44,10 +44,10 @@ export async function POST(request: NextRequest) {
 // PATCH /api/skills/:id
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
     const validated = createSkillSchema.partial().parse(body);
 
@@ -66,10 +66,10 @@ export async function PATCH(
 // DELETE /api/skills/:id
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     await prisma.skill.delete({
       where: { id: Number(id) },

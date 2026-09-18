@@ -115,24 +115,8 @@ export async function GET(request: NextRequest) {
 
     const totalSalary = salaryReports.reduce((sum, r) => sum + r.totalAmount, 0);
 
-    // Получаем ЕОТ отчеты
-    const eotReports = await prisma.eOTReport.findMany({
-      where: {
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
-      include: {
-        items: true,
-      },
-      orderBy: { date: 'desc' },
-    });
-
-    const totalEOT = (eotReports || []).reduce((sum, r) => sum + r.totalAmount, 0);
-
-    const totalIncomeAll = totalIncome + totalAdvances;
-    const totalExpenseAll = totalExpense + totalSalary + totalEOT;
+    const totalIncomeAll = totalIncome;
+    const totalExpenseAll = totalExpense + totalSalary;
     const profit = totalIncomeAll - totalExpenseAll;
 
     // Для графика по месяцам — fetch-all + grouping (1 запрос на таблицу вместо 60)
@@ -144,7 +128,7 @@ export async function GET(request: NextRequest) {
         'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
       ];
 
-      const [transactions, expenses, advanceReportsAll, salaryReportsAll, eotReportsAll] =
+      const [transactions, expenses, advanceReportsAll, salaryReportsAll] =
         await Promise.all([
           prisma.projectTransaction.findMany({
             where: { date: { gte: startDate, lte: endDate } },
@@ -159,10 +143,6 @@ export async function GET(request: NextRequest) {
             select: { totalAmount: true, date: true },
           }),
           prisma.salaryReport.findMany({
-            where: { date: { gte: startDate, lte: endDate } },
-            select: { totalAmount: true, date: true },
-          }),
-          prisma.eOTReport.findMany({
             where: { date: { gte: startDate, lte: endDate } },
             select: { totalAmount: true, date: true },
           }),
@@ -185,10 +165,8 @@ export async function GET(request: NextRequest) {
       };
 
       addIncome(transactions, 'amount');
-      addIncome(advanceReportsAll, 'totalAmount');
       addExpense(expenses, 'amount');
       addExpense(salaryReportsAll, 'totalAmount');
-      addExpense(eotReportsAll, 'totalAmount');
 
       monthlyData = buckets.map((b, i) => ({
         month: monthNames[i],
@@ -254,21 +232,6 @@ export async function GET(request: NextRequest) {
             penalties: i.penalties,
             bonuses: i.bonuses,
             isPaid: i.isPaid,
-          })),
-        })),
-      },
-      eot: {
-        total: totalEOT,
-        reports: eotReports.map(r => ({
-          id: r.id,
-          date: r.date,
-          totalAmount: r.totalAmount,
-          status: r.status,
-          items: r.items.map(i => ({
-            employeeName: i.employeeName,
-            paymentType: i.paymentType,
-            salary: i.salary,
-            comment: i.comment,
           })),
         })),
       },

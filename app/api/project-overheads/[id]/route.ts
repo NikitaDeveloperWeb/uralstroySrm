@@ -10,9 +10,9 @@ const updateSchema = z.object({
 });
 
 // PATCH /api/project-overheads/[id] - обновить расход
-export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(request: NextRequest, context: any) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
     const validated = updateSchema.parse(body);
 
@@ -33,9 +33,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 }
 
 // DELETE /api/project-overheads/[id] - удалить расход
-export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: NextRequest, context: any) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     await prisma.projectOverhead.delete({
       where: { id: parseInt(id) },
     });

@@ -6,10 +6,10 @@ import { updateEmployeeSchema } from '@/shared/lib/validators';
 // GET /api/employees/[id] - получить сотрудника по ID
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const employee = await prisma.employee.findUnique({
       where: { id: Number(id) },
       include: {
@@ -32,10 +32,10 @@ export async function GET(
 // PATCH /api/employees/[id] - обновить сотрудника
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const body = await request.json();
     const validated = updateEmployeeSchema.parse(body);
 
@@ -70,10 +70,10 @@ export async function PATCH(
 // DELETE /api/employees/[id] - удалить сотрудника
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
 
     await prisma.employee.delete({
       where: { id: Number(id) },

@@ -18,7 +18,7 @@ interface Props {
   setEditForm: (form: Partial<Project> | ((prev: Partial<Project>) => Partial<Project>)) => void;
   isOpen: boolean;
   onClose: () => void;
-  onSave: () => Promise<void>;
+  onSave: (data: Partial<Project>) => Promise<void>;
 }
 
 export function EditForm({ project, editForm, setEditForm, isOpen, onClose, onSave }: Props) {
@@ -45,16 +45,16 @@ export function EditForm({ project, editForm, setEditForm, isOpen, onClose, onSa
     if (isOpen) {
       if (nameRef.current) nameRef.current.value = editForm.name || '';
       if (typeRef.current) typeRef.current.value = editForm.type || '';
-      if (areaRef.current) typeRef.current.value = editForm.area || '';
+      if (areaRef.current) areaRef.current.value = editForm.area || '';
       if (addressRef.current) addressRef.current.value = editForm.address || '';
-      if (costRef.current) costRef.current.value = editForm.cost ?? '';
+      if (costRef.current) costRef.current.value = (editForm.cost ?? '').toString();
       if (deadlineRef.current) deadlineRef.current.value = editForm.deadline || '';
       if (complexityRef.current) complexityRef.current.value = editForm.complexity || 'средний';
       if (statusRef.current) statusRef.current.value = editForm.status || 'создан';
       if (clientIdRef.current) clientIdRef.current.value = editForm.clientId?.toString() || '';
       if (brigadeIdRef.current) brigadeIdRef.current.value = editForm.brigade?.id?.toString() || '';
       if (codeRef.current) codeRef.current.value = editForm.code || '';
-      if (prepaymentRef.current) prepaymentRef.current.value = editForm.prepayment ?? '';
+      if (prepaymentRef.current) prepaymentRef.current.value = (editForm.prepayment ?? '').toString();
       if (prepaymentDateRef.current) prepaymentDateRef.current.value = editForm.prepaymentDate || '';
     }
   }, [isOpen, editForm]);
@@ -85,8 +85,7 @@ export function EditForm({ project, editForm, setEditForm, isOpen, onClose, onSa
       prepaymentDate: prepaymentDateRef.current?.value || '',
     };
 
-    setEditForm(updatedForm);
-    await onSave();
+    await onSave(updatedForm);
     onClose();
   };
 

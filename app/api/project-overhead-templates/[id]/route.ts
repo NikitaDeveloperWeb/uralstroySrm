@@ -12,10 +12,10 @@ const updateSchema = z.object({
 // GET /api/project-overhead-templates/[id] - получить один шаблон
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const templateId = parseInt(id);
 
     if (isNaN(templateId)) {
@@ -40,10 +40,10 @@ export async function GET(
 // PATCH /api/project-overhead-templates/[id] - обновить шаблон
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const templateId = parseInt(id);
 
     if (isNaN(templateId)) {
@@ -84,10 +84,10 @@ export async function PATCH(
 // DELETE /api/project-overhead-templates/[id] - удалить шаблон
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
     const templateId = parseInt(id);
 
     if (isNaN(templateId)) {

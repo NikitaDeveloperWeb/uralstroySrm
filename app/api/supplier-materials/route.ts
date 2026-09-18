@@ -6,19 +6,23 @@ import { calculateStockStatus } from '@/shared/lib/warehouse';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { supplierId, name, category, quantity, unit, price, amount, date, comment } = body;
+    const { supplierId, name, category, quantity, unit, price, amount, discount, date, comment, projectId, stage } = body;
 
-    if (!supplierId || !name || !category || !quantity || !unit || !amount) {
-      return errorResponse('Укажите обязательные поля: поставщик, название, категория, количество, единица и сумма', 400);
+    if (!supplierId || !name || !category || !quantity || !unit) {
+      return errorResponse('Укажите обязательные поля: поставщик, название, категория, количество и единица', 400);
     }
 
     const qty = Number(quantity);
     const amt = Number(amount);
     const prc = price ? Number(price) : null;
+    const disc = discount ? Number(discount) : 0;
 
-    if (isNaN(qty) || isNaN(amt) || qty <= 0 || amt <= 0) {
-      return errorResponse('Некорректные значения количества или суммы', 400);
+    if (isNaN(qty) || qty <= 0) {
+      return errorResponse('Некорректное значение количества', 400);
     }
+
+    const calculatedAmount = qty * (prc || 0) * (1 - disc / 100);
+    const finalAmount = amt > 0 ? amt : Math.round(calculatedAmount * 100) / 100;
 
     const dateParsed = date ? new Date(date) : new Date();
 
@@ -64,13 +68,48 @@ export async function POST(request: NextRequest) {
           itemId: item.id,
           type: 'income',
           quantity: qty,
-          amount: amt,
+          amount: finalAmount,
           date: dateParsed,
           comment: comment || null,
           supplierId,
+          projectId: projectId || null,
         },
-        include: { item: true, supplier: true },
+        include: { item: true, supplier: true, project: true },
       });
+
+      // If project is specified, add to project material estimate (merge if exists)
+      if (projectId) {
+        const existing = await tx.materialEstimate.findFirst({
+          where: {
+            projectId: Number(projectId),
+            name,
+            category: category || null,
+            stage: stage || null,
+          },
+        });
+
+        if (existing) {
+          // Sum quantities and costs
+          const existingCost = Number(existing.cost) || 0;
+          await tx.materialEstimate.update({
+            where: { id: existing.id },
+            data: {
+              cost: existingCost + finalAmount,
+            },
+          });
+        } else {
+          await tx.materialEstimate.create({
+            data: {
+              projectId: Number(projectId),
+              name,
+              quantity: `${qty} ${unit}`,
+              cost: finalAmount,
+              category: category || null,
+              stage: stage || null,
+            },
+          });
+        }
+      }
 
       return m;
     });

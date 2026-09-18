@@ -1,7 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Plus, Loader2, Calendar, FileText } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Loader2, Pencil, Trash2, Search, Calendar, FileText } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { Modal } from '@/shared/components/ui/Modal';
+import { Pagination } from '@/shared/components/ui/Pagination';
 import { FinanceCards } from '@/shared/components/finance/FinanceCards';
 import { AdvanceReportCombinedModal } from '@/shared/components/finance/AdvanceReportCombinedModal';
 import { SalaryReportModal } from '@/shared/components/finance/SalaryReportModal';
@@ -10,43 +13,18 @@ import { PenaltyModal } from '@/shared/components/finance/PenaltyModal';
 import { BonusModal } from '@/shared/components/finance/BonusModal';
 import { AddIncomeModal } from '@/shared/components/finance/AddIncomeModal';
 import { IncomeReportModal } from '@/shared/components/finance/IncomeReportModal';
-import { Project } from '@/shared/types/project';
+import type { Project } from '@/shared/types/project';
 import { AddExpenseModal } from '@/shared/components/finance/AddExpenseModal';
 import { ExpenseReportModal } from '@/shared/components/finance/ExpenseReportModal';
 import { FundManagementModal } from '@/shared/components/finance/FundManagementModal';
 import { SummaryReportModal } from '@/shared/components/finance/SummaryReportModal';
+import { EmployeeAdvanceModal } from '@/shared/components/finance/EmployeeAdvanceModal';
 import { useFinanceStore } from '@/shared/stores/financeStore';
 import { useFundStore } from '@/shared/stores/fundStore';
-import { generateEOTReport, fetchEOTReports } from '@/shared/lib/shop-reports-api';
-import { Pagination } from '@/shared/components/ui/Pagination';
 import { useAlert } from '@/shared/hooks/useAlert';
-import * as XLSX from 'xlsx';
 
 
 type ModalType = 'salary' | 'daily-earning' | 'funds' | 'salary-view' | null;
-
-interface EOTItem {
-  id: number;
-  employeeId: number;
-  employeeName: string;
-  paymentType: string;
-  hours?: number;
-  rate?: number;
-  quantity?: number;
-  workAmount?: number;
-  salary: number;
-  shopReportId?: number;
-  comment?: string;
-}
-
-interface EOTReport {
-  id: number;
-  date: string;
-  totalAmount: number;
-  status: string;
-  items: EOTItem[];
-  createdAt: string;
-}
 
 interface Expense {
   id: string;
@@ -103,14 +81,44 @@ interface EmployeeWorkReportEntry {
   completedJobs: number;
 }
 
+interface EOTItem {
+  id: string;
+  employeeName: string;
+  paymentType: string;
+  hours?: number;
+  quantity?: number;
+  rate?: number;
+  workAmount?: number;
+  salary: number;
+}
+
+interface EOTReport {
+  id: string;
+  date: string;
+  items: EOTItem[];
+  totalAmount: number;
+}
+
 export default function FinancePage() {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [showFundManagement, setShowFundManagement] = useState(false);
+  const [expenseCategoriesTab, setExpenseCategoriesTab] = useState(false);
+
+  // Expense categories state
+  const [expenseCategories, setExpenseCategories] = useState<{ id: number; name: string; createdAt: string; updatedAt: string }[]>([]);
+  const [expenseCategoriesLoading, setExpenseCategoriesLoading] = useState(true);
+  const [expenseCategoriesModalOpen, setExpenseCategoriesModalOpen] = useState(false);
+  const [editingExpenseCategory, setEditingExpenseCategory] = useState<{ id: number; name: string; createdAt: string; updatedAt: string } | null>(null);
+  const expenseCategoryNameRef = useRef<HTMLInputElement>(null);
+  const [expenseCategoriesSearch, setExpenseCategoriesSearch] = useState('');
+  const [expenseCategoriesPage, setExpenseCategoriesPage] = useState(1);
+  const expenseCategoriesPerPage = 12;
   
   const { expenses, advanceReports, salaryReports, fetchExpenses, addExpense, addAdvanceReport, addSalaryReport, fetchAdvanceReports, fetchSalaryReports } = useFinanceStore();
   const { funds, fetchFunds, createFund, updateFund, deleteFund, createTransaction } = useFundStore();
   const [showExpenseReport, setShowExpenseReport] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [showIncomeModal, setShowIncomeModal] = useState(false);
   const [showIncomeReport, setShowIncomeReport] = useState(false);
   const [showAdvanceCombined, setShowAdvanceCombined] = useState(false);
   const [showSalaryView, setShowSalaryView] = useState(false);
@@ -118,21 +126,24 @@ export default function FinancePage() {
   const [showBonusModal, setShowBonusModal] = useState(false);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [showEOTView, setShowEOTView] = useState(false);
-  const [showIncomeModal, setShowIncomeModal] = useState(false);
-  const [eotReports, setEOTReports] = useState<EOTReport[]>([]);
-  const [eotLoading, setEOTLoading] = useState(false);
-  const [eotGenerating, setEOTGenerating] = useState(false);
+  const [showEmployeeAdvance, setShowEmployeeAdvance] = useState(false);
   const [todayIncome, setTodayIncome] = useState(0);
-  const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(new Set());
   const [projects, setProjects] = useState<Project[]>([]);
-  const [eotPage, setEotPage] = useState(1);
-  const EOT_PER_PAGE = 10;
-  const { alert, confirm } = useAlert();
 
   const today = new Date().toISOString().split('T')[0];
+
+  // EOT state
+  const [eotReports, setEotReports] = useState<EOTReport[]>([]);
   const [eotDate, setEotDate] = useState(today);
+  const [eotGenerating, setEotGenerating] = useState(false);
+  const [updatingReportId, setUpdatingReportId] = useState<number | null>(null);
+  const [eotPage, setEotPage] = useState(1);
+  const EOT_PER_PAGE = 10;
+  const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(new Set());
+
   const todayExpenses = expenses.filter(e => e.date.startsWith(today)).reduce((sum, e) => sum + e.amount, 0);
   const totalBalance = funds.reduce((sum, f) => sum + f.balance, 0);
+  const { alert, confirm } = useAlert();
 
   useEffect(() => {
     fetchExpenses({ date: today });
@@ -147,7 +158,7 @@ export default function FinancePage() {
         }
       })
       .catch(() => setTodayIncome(0));
-    loadEOTReports();
+    loadProjects();
     loadProjects();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [today]);
@@ -157,20 +168,91 @@ export default function FinancePage() {
     console.log('salaryReports from store:', salaryReports);
   }, [salaryReports]);
 
-  const loadEOTReports = async () => {
+  // Load expense categories
+  useEffect(() => {
+    fetch('/api/expense-categories')
+      .then(res => res.json())
+      .then(data => setExpenseCategories(data?.data || []))
+      .catch(err => console.error('Failed to fetch categories:', err))
+      .finally(() => setExpenseCategoriesLoading(false));
+  }, []);
+
+  // Expense categories handlers
+  const filteredExpenseCategories = expenseCategories.filter(cat =>
+    cat.name.toLowerCase().includes(expenseCategoriesSearch.toLowerCase())
+  );
+
+  const expenseCategoriesTotalPages = Math.ceil(filteredExpenseCategories.length / expenseCategoriesPerPage);
+  const paginatedExpenseCategories = filteredExpenseCategories.slice(
+    (expenseCategoriesPage - 1) * expenseCategoriesPerPage,
+    expenseCategoriesPage * expenseCategoriesPerPage
+  );
+
+  useEffect(() => {
+    setExpenseCategoriesPage(1);
+  }, [expenseCategoriesSearch]);
+
+  const handleDeleteExpenseCategory = async (id: number) => {
+    if (!(await confirm('Удалить эту категорию?'))) return;
     try {
-      const data = await fetchEOTReports();
-      setEOTReports(data || []);
+      await fetch(`/api/expense-categories/${id}`, { method: 'DELETE' });
+      setExpenseCategories(prev => prev.filter(cat => cat.id !== id));
     } catch (error) {
-      console.error('Error loading EOT:', error);
+      console.error('Failed to delete:', error);
     }
   };
 
-  const eotTotalPages = Math.ceil(eotReports.length / EOT_PER_PAGE) || 1;
-  const paginatedEOTReports = eotReports.slice(
-    (eotPage - 1) * EOT_PER_PAGE,
-    eotPage * EOT_PER_PAGE,
-  );
+  const handleAddExpenseCategory = () => {
+    setEditingExpenseCategory(null);
+    setExpenseCategoriesModalOpen(true);
+    setTimeout(() => {
+      if (expenseCategoryNameRef.current) expenseCategoryNameRef.current.value = '';
+    }, 0);
+  };
+
+  const handleEditExpenseCategory = (category: { id: number; name: string; createdAt: string; updatedAt: string }) => {
+    setEditingExpenseCategory(category);
+    setExpenseCategoriesModalOpen(true);
+    setTimeout(() => {
+      if (expenseCategoryNameRef.current) expenseCategoryNameRef.current.value = category.name;
+    }, 0);
+  };
+
+  const handleSaveExpenseCategory = async () => {
+    try {
+      const name = expenseCategoryNameRef.current?.value?.trim() || '';
+
+      if (!name) {
+        alert('Укажите название');
+        return;
+      }
+
+      if (editingExpenseCategory) {
+        await fetch(`/api/expense-categories/${editingExpenseCategory.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        });
+        setExpenseCategories(prev => prev.map(cat =>
+          cat.id === editingExpenseCategory.id ? { ...cat, name } : cat
+        ));
+      } else {
+        const res = await fetch('/api/expense-categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        });
+        const newCategory = await res.json();
+        setExpenseCategories(prev => [...prev, newCategory.data]);
+      }
+      setExpenseCategoriesModalOpen(false);
+      setEditingExpenseCategory(null);
+    } catch (error) {
+      console.error('Failed to save:', error);
+    }
+  };
+
+
 
   const loadProjects = async () => {
     try {
@@ -190,29 +272,77 @@ export default function FinancePage() {
   };
 
   const handleGenerateEOT = async () => {
-    setEOTGenerating(true);
+    setEotGenerating(true);
     try {
-      await generateEOTReport(eotDate);
-      await loadEOTReports();
-      alert('Отчет ЕОТ успешно сгенерирован!');
-    } catch (error: any) {
-      alert(error.message || 'Ошибка при генерации ЕОТ');
+      // Создаем отчет за выбранную дату
+      const res = await fetch('/api/eot-reports', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: eotDate }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // После генерации загружаем все отчеты
+        const listRes = await fetch('/api/eot-reports');
+        const listData = await listRes.json();
+        if (listData.success) {
+          setEotReports(listData.data || []);
+          setShowEOTView(true);
+        }
+      } else {
+        console.error('Error generating EOT:', data.error);
+      }
+    } catch (error) {
+      console.error('Error generating EOT:', error);
     } finally {
-      setEOTGenerating(false);
+      setEotGenerating(false);
+    }
+  };
+
+  const handleRefreshEOT = async (reportId: number) => {
+    setUpdatingReportId(reportId);
+    try {
+      const res = await fetch(`/api/eot-reports/${reportId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEotReports(prev => prev.map(r => String(r.id) === String(reportId) ? data.data : r));
+      }
+    } catch (error) {
+      console.error('Error refreshing EOT:', error);
+    } finally {
+      setUpdatingReportId(null);
+    }
+  };
+
+  const handleRefreshAllEOT = async () => {
+    setUpdatingReportId(-1);
+    try {
+      await handleGenerateEOT();
+    } finally {
+      setUpdatingReportId(null);
     }
   };
 
   const toggleMonth = (monthName: string) => {
     setCollapsedMonths(prev => {
-      const next = new Set(prev);
-      if (next.has(monthName)) {
-        next.delete(monthName);
+      const newSet = new Set(prev);
+      if (newSet.has(monthName)) {
+        newSet.delete(monthName);
       } else {
-        next.add(monthName);
+        newSet.add(monthName);
       }
-      return next;
+      return newSet;
     });
   };
+
+  const eotTotalPages = Math.ceil(eotReports.length / EOT_PER_PAGE);
+  const paginatedEOTReports = eotReports.slice(
+    (eotPage - 1) * EOT_PER_PAGE,
+    eotPage * EOT_PER_PAGE
+  );
 
   const handleAdvanceReportSubmit = async (data: {
     date: string;
@@ -258,19 +388,113 @@ export default function FinancePage() {
         todayExpenses={todayExpenses}
         totalBalance={totalBalance}
         todayIncome={todayIncome}
-        eotCount={eotReports.length}
         onAddExpense={() => setShowAddExpense(true)}
         onAddIncome={() => setShowIncomeModal(true)}
         onViewExpenseReport={() => setShowExpenseReport(true)}
         onViewAdvance={() => setShowAdvanceCombined(true)}
         onViewSalary={() => setActiveModal('salary')}
         onViewEarnings={() => setShowIncomeReport(true)}
-        onViewEOT={() => setShowEOTView(true)}
         onViewPenalty={() => setShowPenaltyModal(true)}
         onViewBonus={() => setShowBonusModal(true)}
         onViewSummary={() => setShowSummaryModal(true)}
+        onViewEOT={() => handleGenerateEOT()}
+        onViewEmployeeAdvance={() => setShowEmployeeAdvance(true)}
         onManageFunds={() => setShowFundManagement(true)}
       />
+
+      {/* Вкладка Категории расходов */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setExpenseCategoriesTab(!expenseCategoriesTab)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            expenseCategoriesTab
+              ? 'bg-[#1976d2] text-white'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 7h.01M7 7h.01M17 7h.01M17 7h.01M17 7h.01M7 12h.01M7 12h.01M7 12h.01M17 12h.01M17 12h.01M17 12h.01M7 17h.01M7 17h.01M7 17h.01M17 17h.01M17 17h.01M17 17h.01" />
+          </svg>
+          Категории расходов ({expenseCategories.length})
+        </button>
+      </div>
+
+      {expenseCategoriesTab && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white dark:text-white">Категории расходов</h2>
+            <button
+              onClick={handleAddExpenseCategory}
+              className="flex items-center gap-2 bg-[#1976d2] hover:bg-[#1565c0] text-white font-semibold px-4 py-2 rounded-lg transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Добавить категорию
+            </button>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+              <Search className="w-5 h-5 text-gray-400 dark:text-slate-500 dark:text-slate-500" />
+            </div>
+            <input
+              type="text"
+              placeholder="Поиск по названию..."
+              value={expenseCategoriesSearch}
+              onChange={(e) => setExpenseCategoriesSearch(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] text-gray-900 dark:text-white dark:text-white"
+            />
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-lg shadow-md overflow-hidden">
+            {expenseCategoriesLoading ? (
+              <div className="p-8 text-center text-gray-500 dark:text-slate-400 dark:text-slate-400">Загрузка...</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b-2 border-gray-200 dark:border-slate-700 dark:border-slate-700 bg-gray-50 dark:bg-slate-700 dark:bg-slate-700">
+                      <th className="text-left py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">Название</th>
+                      <th className="text-center py-4 px-6 text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300">Действия</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedExpenseCategories.map((category) => (
+                      <tr key={category.id} className="border-b border-gray-100 dark:border-slate-700 dark:border-slate-700 hover:bg-gray-50 dark:hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-700 dark:bg-slate-700 transition-colors">
+                        <td className="py-4 px-6 text-gray-900 dark:text-white dark:text-white font-medium">{category.name}</td>
+                        <td className="py-4 px-6 text-center">
+                          <div className="flex items-center justify-center gap-3">
+                            <button
+                              onClick={() => handleEditExpenseCategory(category)}
+                              className="text-blue-600 hover:text-blue-800 transition-colors"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteExpenseCategory(category.id)}
+                              className="text-red-600 hover:text-red-800 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+          {filteredExpenseCategories.length > 0 && (
+            <Pagination
+              currentPage={expenseCategoriesPage}
+              totalPages={expenseCategoriesTotalPages}
+              onPageChange={setExpenseCategoriesPage}
+              totalItems={filteredExpenseCategories.length}
+              itemsPerPage={expenseCategoriesPerPage}
+            />
+          )}
+        </div>
+      )}
 
       {/* Modals */}
       <AdvanceReportCombinedModal
@@ -355,6 +579,14 @@ export default function FinancePage() {
                 />
               </div>
               <button
+                onClick={handleRefreshAllEOT}
+                disabled={updatingReportId === -1}
+                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
+              >
+                {updatingReportId === -1 ? <Loader2 className="w-4 h-4 animate-spin" /> : <Loader2 className="w-4 h-4" />}
+                Обновить все
+              </button>
+              <button
                 onClick={handleGenerateEOT}
                 disabled={eotGenerating}
                 className="bg-[#1976d2] hover:bg-[#1565c0] disabled:bg-gray-400 dark:bg-slate-600 dark:bg-slate-600 text-white font-semibold px-4 py-2 rounded-lg transition-colors flex items-center gap-2"
@@ -403,6 +635,18 @@ export default function FinancePage() {
                                 <p className="text-sm text-gray-500 dark:text-slate-400 dark:text-slate-400">Сотрудников: {report.items.length}</p>
                               </div>
                               <div className="flex items-center gap-2">
+                                <button
+                                  onClick={() => handleRefreshEOT(Number(report.id))}
+                                  disabled={updatingReportId === Number(report.id)}
+                                  className="text-orange-600 hover:text-orange-800 transition-colors p-1.5 hover:bg-orange-50 rounded-lg disabled:opacity-50"
+                                  title="Обновить отчет"
+                                >
+                                  {updatingReportId === Number(report.id) ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Loader2 className="w-4 h-4" />
+                                  )}
+                                </button>
                                 <button
                                   onClick={() => {
                                     const wb = XLSX.utils.book_new();
@@ -518,6 +762,11 @@ export default function FinancePage() {
         onClose={() => setShowSummaryModal(false)}
       />
 
+      <EmployeeAdvanceModal
+        isOpen={showEmployeeAdvance}
+        onClose={() => setShowEmployeeAdvance(false)}
+      />
+
       <FundManagementModal
         isOpen={showFundManagement}
         onClose={() => setShowFundManagement(false)}
@@ -550,6 +799,34 @@ export default function FinancePage() {
         }}
         onCreateModal={() => alert('Создание нового фонда')}
       />
+
+      {/* Модальное окно категорий расходов */}
+      <Modal
+        isOpen={expenseCategoriesModalOpen}
+        onClose={() => { setExpenseCategoriesModalOpen(false); setEditingExpenseCategory(null); }}
+        title={editingExpenseCategory ? 'Редактировать категорию' : 'Новая категория'}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-1">Название</label>
+            <input ref={expenseCategoryNameRef} type="text" className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2]" placeholder="Например: Бензин/ГСМ" />
+          </div>
+          <div className="flex gap-4 pt-4">
+            <button
+              onClick={handleSaveExpenseCategory}
+              className="flex-1 bg-[#1976d2] hover:bg-[#1565c0] text-white py-3 px-4 rounded-lg font-semibold transition-colors"
+            >
+              Сохранить
+            </button>
+            <button
+              onClick={() => { setExpenseCategoriesModalOpen(false); setEditingExpenseCategory(null); }}
+              className="flex-1 bg-gray-200 dark:bg-slate-700 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-600 dark:bg-slate-600 text-gray-700 dark:text-slate-300 dark:text-slate-300 py-3 px-4 rounded-lg font-semibold transition-colors"
+            >
+              Отмена
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -11,6 +11,7 @@ export interface ProjectMaterial {
   quantity: string;
   cost: number;
   category?: string | null;
+  stage?: string | null;
   createdAt: string;
 }
 
@@ -21,6 +22,7 @@ export interface ProjectCompletedWork {
   quantity: string;
   cost: number;
   category?: string | null;
+  stage?: string | null;
   createdAt: string;
 }
 

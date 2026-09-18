@@ -36,12 +36,63 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = createEmployeeWorkReportSchema.parse(body);
 
-    const report = await prisma.employeeWorkReport.create({
-      data: validated,
-      include: {
-        employee: true,
-        project: true,
-      },
+    const report = await prisma.$transaction(async (tx) => {
+      const createData = {
+        employeeId: validated.employeeId,
+        workType: validated.workType,
+        quantity: validated.quantity,
+        rate: validated.rate,
+        amount: validated.amount,
+        date: validated.date,
+        comment: validated.comment,
+        stage: validated.stage,
+        projectId: validated.projectId ?? null,
+      };
+
+      const created = await tx.employeeWorkReport.create({
+        data: createData,
+        include: {
+          employee: true,
+          project: true,
+        },
+      });
+
+      // Если указан проект — добавить в смету работ проекта (merge if exists)
+      if (validated.projectId) {
+        const existing = await tx.completedWork.findFirst({
+          where: {
+            projectId: validated.projectId,
+            name: validated.workType,
+            stage: validated.stage || null,
+          },
+        });
+
+        if (existing) {
+          // Sum quantities and costs
+          const existingCost = Number(existing.cost) || 0;
+          const existingQty = parseFloat(String(existing.quantity)) || 0;
+          await tx.completedWork.update({
+            where: { id: existing.id },
+            data: {
+              quantity: String(existingQty + validated.quantity),
+              cost: existingCost + Math.round(validated.amount),
+            },
+          });
+        } else {
+          await tx.completedWork.create({
+            data: {
+              projectId: validated.projectId,
+              name: validated.workType,
+              quantity: String(validated.quantity),
+              cost: Math.round(validated.amount),
+              category: null,
+              stage: validated.stage || null,
+            },
+          });
+        }
+      }
+
+      return created;
     });
 
     return successResponse(report, 201);

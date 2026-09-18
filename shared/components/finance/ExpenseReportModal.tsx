@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { Calendar, ChevronDown, ChevronUp, Clock, Loader2, Sun, Globe, Search, Trash2 } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, Clock, Loader2, Sun, Globe, Search, Trash2, Pencil, Download } from 'lucide-react';
 import { Modal } from '@/shared/components/ui/Modal';
+import { exportExpensesToExcel } from '@/shared/lib/excelExport';
 
 
 interface ExpenseItem {
@@ -12,6 +13,8 @@ interface ExpenseItem {
   recipient: string;
   purpose: string;
   category: string;
+  projectId?: number | null;
+  project?: { id: number; name: string } | null;
 }
 
 interface ExpenseCategory {
@@ -61,6 +64,9 @@ export function ExpenseReportModal({ isOpen, onClose }: ExpenseReportModalProps)
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
   const [deleting, setDeleting] = useState<number | null>(null);
+  const [editingExpense, setEditingExpense] = useState<ExpenseItem | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [projects, setProjects] = useState<{ id: number; name: string }[]>([]);
 
   useEffect(() => {
     fetch('/api/expense-categories')
@@ -71,6 +77,15 @@ export function ExpenseReportModal({ isOpen, onClose }: ExpenseReportModalProps)
       })
       .catch(err => {
         console.error('Failed to fetch expense categories:', err);
+      });
+    fetch('/api/projects')
+      .then(res => res.json())
+      .then(data => {
+        const items = (data as any).data || data || [];
+        setProjects(Array.isArray(items) ? items : []);
+      })
+      .catch(err => {
+        console.error('Failed to fetch projects:', err);
       });
   }, []);
 
@@ -147,12 +162,13 @@ export function ExpenseReportModal({ isOpen, onClose }: ExpenseReportModalProps)
   }, [expenses]);
 
   const expensesByCategory = expenses.reduce((acc, exp) => {
-    const cat = exp.category || 'other';
-    if (!acc[cat]) {
-      acc[cat] = { count: 0, total: 0 };
+    const cat = exp.category ?? undefined;
+    const key = cat ?? 'Без категории';
+    if (!acc[key]) {
+      acc[key] = { count: 0, total: 0 };
     }
-    acc[cat].count++;
-    acc[cat].total += exp.amount;
+    acc[key].count++;
+    acc[key].total += exp.amount;
     return acc;
   }, {} as Record<string, { count: number; total: number }>);
 
@@ -181,6 +197,38 @@ export function ExpenseReportModal({ isOpen, onClose }: ExpenseReportModalProps)
     } finally {
       setDeleting(null);
     }
+  };
+
+  const handleEdit = (expense: ExpenseItem) => {
+    setEditingExpense(expense);
+    setIsEditModalOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingExpense) return;
+    try {
+      await fetch(`/api/expenses?id=${editingExpense.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: editingExpense.amount,
+          recipient: editingExpense.recipient,
+          purpose: editingExpense.purpose,
+          category: editingExpense.category,
+          date: editingExpense.date,
+          projectId: editingExpense.projectId,
+        }),
+      });
+      setIsEditModalOpen(false);
+      setEditingExpense(null);
+      fetchExpenses();
+    } catch (error) {
+      console.error('Error updating expense:', error);
+    }
+  };
+
+  const handleExportExcel = () => {
+    exportExpensesToExcel(filteredExpenses, period);
   };
 
   const monthNames = [
@@ -324,6 +372,17 @@ export function ExpenseReportModal({ isOpen, onClose }: ExpenseReportModalProps)
               ))}
             </select>
           )}
+          
+          {/* Кнопка экспорта в Excel */}
+          {filteredExpenses.length > 0 && (
+            <button
+              onClick={handleExportExcel}
+              className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors font-medium"
+            >
+              <Download className="w-4 h-4" />
+              Экспорт в Excel
+            </button>
+          )}
         </div>
 
         {/* Summary cards */}
@@ -437,11 +496,21 @@ export function ExpenseReportModal({ isOpen, onClose }: ExpenseReportModalProps)
                               </div>
                               <p className="text-sm font-semibold text-gray-900 dark:text-white mb-0.5">{expense.purpose}</p>
                               <p className="text-xs text-gray-600 dark:text-slate-300">Кому: {expense.recipient}</p>
+                              {expense.project && (
+                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">Проект: {expense.project.name}</p>
+                              )}
                             </div>
                             <div className="flex items-center gap-2 ml-4">
                               <p className="text-base font-bold text-gray-900 dark:text-white">
                                 {expense.amount.toLocaleString('ru-RU')} ₽
                               </p>
+                              <button
+                                onClick={() => handleEdit(expense)}
+                                className="p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                title="Редактировать"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
                               <button
                                 onClick={() => handleDelete(expense.id)}
                                 disabled={deleting === expense.id}
@@ -465,6 +534,98 @@ export function ExpenseReportModal({ isOpen, onClose }: ExpenseReportModalProps)
             </div>
           )}
         </div>
+
+        {/* Edit Modal */}
+        <Modal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingExpense(null);
+          }}
+          title="Редактировать расход">
+          {editingExpense && (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Сумма *</label>
+                <input
+                  type="number"
+                  value={editingExpense.amount}
+                  onChange={(e) => setEditingExpense({ ...editingExpense, amount: Number(e.target.value) })}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-slate-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Назначение *</label>
+                <input
+                  type="text"
+                  value={editingExpense.purpose}
+                  onChange={(e) => setEditingExpense({ ...editingExpense, purpose: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-slate-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Получатель *</label>
+                <input
+                  type="text"
+                  value={editingExpense.recipient}
+                  onChange={(e) => setEditingExpense({ ...editingExpense, recipient: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-slate-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Категория</label>
+                <input
+                  type="text"
+                  value={editingExpense.category}
+                  onChange={(e) => setEditingExpense({ ...editingExpense, category: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-slate-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Дата</label>
+                <input
+                  type="date"
+                  value={editingExpense.date}
+                  onChange={(e) => setEditingExpense({ ...editingExpense, date: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-slate-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Проект (опционально)</label>
+                <select
+                  value={editingExpense.project?.id ?? ''}
+                  onChange={(e) => {
+                    const projectId = e.target.value ? Number(e.target.value) : null;
+                    setEditingExpense({ ...editingExpense, projectId });
+                  }}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 dark:bg-slate-700 dark:text-white"
+                >
+                  <option value="">Без проекта</option>
+                  {projects.map((project) => (
+                    <option key={project.id} value={project.id}>
+                      {project.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-4 pt-4">
+                <button
+                  onClick={handleSaveEdit}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-3 px-4 rounded-lg font-semibold transition-colors">
+                  Сохранить
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setEditingExpense(null);
+                  }}
+                  className="flex-1 bg-gray-200 dark:bg-slate-700 hover:bg-gray-300 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300 py-3 px-4 rounded-lg font-semibold transition-colors">
+                  Отмена
+                </button>
+              </div>
+            </div>
+          )}
+        </Modal>
       </div>
     </Modal>
   );

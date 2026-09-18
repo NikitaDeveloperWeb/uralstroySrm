@@ -35,8 +35,16 @@ export function WorksTab({ items, onSave, isSaving, projectId }: WorksTabProps) 
   }, [fetchSurveyUnitRates]);
 
   useEffect(() => {
-    if (!editing) setEditItems([...items]);
-  }, [items, editing]);
+    if (!editing) {
+      setEditItems(prev => {
+        // Only update if items length changed
+        if (prev.length !== items.length) {
+          return [...items];
+        }
+        return prev;
+      });
+    }
+  }, [items.length, editing]);
 
   // Берём только unit rates (вашу таблицу видов работ)
   const combinedTemplates: CombinedWorkTemplate[] = useMemo(() => {
@@ -70,6 +78,7 @@ export function WorksTab({ items, onSave, isSaving, projectId }: WorksTabProps) 
       quantity: template.quantity,
       cost: template.cost,
       category: template.category || null,
+      stage: null,
       createdAt: new Date().toISOString(),
     };
     setEditItems(prev => [...prev, newItem]);
@@ -89,6 +98,7 @@ export function WorksTab({ items, onSave, isSaving, projectId }: WorksTabProps) 
             quantity: item.quantity,
             cost: item.cost,
             category: item.category || undefined,
+            stage: item.stage || undefined,
           });
         }
       }
@@ -102,6 +112,7 @@ export function WorksTab({ items, onSave, isSaving, projectId }: WorksTabProps) 
               quantity: item.quantity,
               cost: item.cost,
               category: item.category || undefined,
+              stage: item.stage || undefined,
             });
           }
         }
@@ -133,6 +144,7 @@ export function WorksTab({ items, onSave, isSaving, projectId }: WorksTabProps) 
       quantity: '',
       cost: 0,
       category: null,
+      stage: null,
       createdAt: new Date().toISOString(),
     }]);
   };
@@ -146,7 +158,7 @@ export function WorksTab({ items, onSave, isSaving, projectId }: WorksTabProps) 
     setEditItems(editItems.filter((_, i) => i !== index));
   };
 
-  const mergedItems = editing ? editItems : items;
+  const mergedItems = useMemo(() => editing ? editItems : items, [editing, editItems.length, items.length]);
 
   return (
     <div className="space-y-4">

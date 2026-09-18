@@ -4,9 +4,9 @@ import { prisma } from '@/lib/prisma';
 // GET /api/salary-reports/[id]
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
-  const { id } = await params;
+  const { id } = await context.params;
 
   try {
     const report = await prisma.salaryReport.findUnique({
@@ -34,9 +34,9 @@ export async function GET(
 // PATCH /api/salary-reports/[id]
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
-  const { id } = await params;
+  const { id } = await context.params;
 
   try {
     const body = await request.json();
@@ -111,9 +111,9 @@ export async function PATCH(
 // DELETE /api/salary-reports/[id]
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
+  context: any
 ) {
-  const { id } = await params;
+  const { id } = await context.params;
 
   try {
     const report = await prisma.salaryReport.findUnique({

@@ -54,7 +54,7 @@ export const createProjectSchema = z.object({
   insulationThickness: z.string().nullable().optional(),
 });
 
-export const updateProjectSchema = createProjectSchema.partial();
+export const updateProjectSchema = createProjectSchema.partial().passthrough();
 
 // ============================================================
 // Brigade Schemas
@@ -117,7 +117,7 @@ export const updateEmployeeSchema = z.object({
 export const createWarehouseItemSchema = z.object({
   name: z.string().min(1, 'Название обязательно'),
   category: z.string().min(1, 'Категория обязательна'),
-  quantity: z.coerce.number().int().nonnegative(),
+  quantity: z.coerce.number().pipe(z.number().int().nonnegative()),
   unit: z.string().min(1, 'Единица измерения обязательна'),
   price: z.coerce.number().int().nonnegative().optional().nullable(),
   lotNumber: z.string().optional().nullable(),
@@ -138,8 +138,8 @@ export const createWarehouseMovementSchema = z.object({
   type: z.enum(['income', 'expense'], {
     message: 'Тип должен быть income или expense',
   }),
-  quantity: z.coerce.number().int().positive(),
-  amount: z.coerce.number().int().nonnegative().optional().nullable(),
+  quantity: z.coerce.number().positive(),
+  amount: z.coerce.number().nonnegative().optional().nullable(),
   date: z.coerce.date(),
   comment: z.string().optional().nullable(),
   supplierId: z.coerce.number().int().positive().optional().nullable(),
@@ -152,16 +152,18 @@ export const createWarehouseMovementSchema = z.object({
 export const createMaterialEstimateSchema = z.object({
   projectId: z.coerce.number().int().positive(),
   name: z.string().min(1, 'Название материала обязательно'),
-  quantity: z.coerce.string().min(1, 'Количество обязательно'),
-  cost: z.coerce.number().int().nonnegative(),
+  quantity: z.preprocess((v) => (v === '' || v == null ? '' : String(v)), z.string().min(1, 'Количество обязательно')),
+  cost: z.coerce.number().nonnegative(),
   category: z.string().optional().nullable(),
+  stage: z.string().optional().nullable(),
 });
 
 export const updateMaterialEstimateSchema = z.object({
   name: z.string().optional(),
   quantity: z.string().optional(),
-  cost: z.coerce.number().int().nonnegative().optional(),
+  cost: z.coerce.number().nonnegative().optional(),
   category: z.string().optional().nullable(),
+  stage: z.string().optional().nullable(),
 });
 
 // ============================================================
@@ -170,10 +172,11 @@ export const updateMaterialEstimateSchema = z.object({
 
 export const createCompletedWorkSchema = z.object({
   projectId: z.coerce.number().int().positive(),
-  name: z.string().min(1, 'Название работы обязательно'),
-  quantity: z.string().min(1, 'Количество обязательно'),
+  name: z.preprocess((v) => (v === '' || v == null ? '' : String(v)), z.string().min(1, 'Название работы обязательно')),
+  quantity: z.preprocess((v) => (v === '' || v == null ? '' : String(v)), z.string().min(1, 'Количество обязательно')),
   cost: z.coerce.number().int().nonnegative(),
   category: z.string().optional().nullable(),
+  stage: z.string().optional().nullable(),
 });
 
 export const updateCompletedWorkSchema = createCompletedWorkSchema.partial();
@@ -296,13 +299,14 @@ export const updateProjectReportSchema = z.object({
 
 export const createEmployeeWorkReportSchema = z.object({
   employeeId: z.coerce.number().int().positive(),
-  projectId: z.coerce.number().int().positive(),
+  projectId: z.coerce.number().int().positive().optional().nullable(),
   workType: z.string().min(1, 'Тип работы обязателен'),
   quantity: z.coerce.number().positive('Количество должно быть больше 0'),
   rate: z.coerce.number().positive('Ставка должна быть больше 0'),
   amount: z.coerce.number().positive('Сумма должна быть больше 0'),
   date: z.coerce.date(),
   comment: z.string().optional().nullable(),
+  stage: z.string().optional().nullable(),
 }).refine((data) => {
   const calculated = Math.round(data.quantity * data.rate * 100) / 100;
   const roundedAmount = Math.round(data.amount * 100) / 100;
@@ -321,6 +325,7 @@ export const updateEmployeeWorkReportSchema = z.object({
   amount: z.coerce.number().positive('Сумма должна быть больше 0').optional(),
   date: z.coerce.date().optional(),
   comment: z.string().optional().nullable(),
+  stage: z.string().optional().nullable(),
 }).refine((data) => {
   if (data.quantity === undefined && data.rate === undefined && data.amount === undefined) return true;
   const qty = data.quantity ?? 1;
@@ -560,3 +565,28 @@ export const createTechEquipmentSchema = z.object({
 });
 
 export const updateTechEquipmentSchema = createTechEquipmentSchema.partial();
+
+// ============================================================
+// FinancialPlan Schemas
+// ============================================================
+
+export const createFinancialPlanSchema = z.object({
+  projectId: z.coerce.number().int().positive(),
+  periodFrom: z.coerce.date(),
+  periodTo: z.coerce.date(),
+  plannedAmount: z.coerce.number().int().min(0),
+  comment: z.string().optional().nullable(),
+}).refine((data) => data.periodTo > data.periodFrom, {
+  message: 'Конечная дата должна быть позже начальной',
+  path: ['periodTo'],
+});
+
+export const updateFinancialPlanSchema = z.object({
+  periodFrom: z.coerce.date().optional(),
+  periodTo: z.coerce.date().optional(),
+  plannedAmount: z.coerce.number().int().min(0).optional(),
+  comment: z.string().optional().nullable(),
+}).refine((data) => !data.periodTo || !data.periodFrom || data.periodTo > data.periodFrom, {
+  message: 'Конечная дата должна быть позже начальной',
+  path: ['periodTo'],
+});

@@ -9,12 +9,12 @@ interface Props {
   onClose: () => void;
   editForm: Partial<Project>;
   setEditForm: (form: Partial<Project> | ((prev: Partial<Project>) => Partial<Project>)) => void;
-  onSave: () => void;
+  onSave: (data: Partial<Project>) => void;
 }
 
 export function ProjectObjectCardEditModal({ isOpen, onClose, editForm, setEditForm, onSave }: Props) {
   const handleSave = () => {
-    onSave();
+    onSave(editForm);
     onClose();
   };
 
