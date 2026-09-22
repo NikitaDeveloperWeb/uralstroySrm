@@ -3,10 +3,21 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
     // 1. Проекты
     const totalProjects = await prisma.project.count();
     const activeProjects = await prisma.project.count({
       where: { status: 'в работе' }
+    });
+    const pausedProjects = await prisma.project.count({
+      where: { status: 'на паузе' }
+    });
+    const completedProjects = await prisma.project.count({
+      where: { status: 'завершен' }
     });
     const totalProjectCost = await prisma.project.aggregate({
       _sum: { cost: true }
@@ -15,12 +26,25 @@ export async function GET() {
       ? Math.round((totalProjectCost._sum.cost || 0) / totalProjects)
       : 0;
 
+    // Просроченные проекты
+    const overdueProjects = await prisma.project.count({
+      where: {
+        deadline: { lt: today },
+        status: { not: 'завершен' }
+      }
+    });
+
+    // Проекты с дедлайном на этой неделе
+    const upcomingDeadlines = await prisma.project.count({
+      where: {
+        deadline: { gte: today, lt: nextWeek },
+        status: { not: 'завершен' }
+      }
+    });
+
     // 2. Сотрудники
     const totalEmployees = await prisma.employee.count();
     
-    // 3. Сегодня на смене (сотрудники с записями в графике за сегодня)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
@@ -36,15 +60,35 @@ export async function GET() {
       }
     });
 
-    // 4. Финансы (используем ProjectTransaction)
+    // 3. Финансы за текущий месяц
+    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const firstDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+
     const allTransactions = await prisma.projectTransaction.findMany({
+      where: {
+        date: {
+          gte: firstDayOfMonth,
+          lt: firstDayNextMonth
+        }
+      },
       select: { amount: true }
     });
     const totalIncome = allTransactions.reduce((sum, t) => sum + t.amount, 0);
-    const totalExpense = 0; // Пока нет разделения на доходы/расходы
-    const balance = totalIncome;
+    
+    const allExpenses = await prisma.expense.findMany({
+      where: {
+        date: {
+          gte: firstDayOfMonth,
+          lt: firstDayNextMonth
+        }
+      },
+      select: { amount: true }
+    });
+    const totalExpense = allExpenses.reduce((sum, e) => sum + e.amount, 0);
+    const balance = totalIncome - totalExpense;
+    const profitMargin = totalIncome > 0 ? Math.round((balance / totalIncome) * 100) : 0;
 
-    // 5. Последние проекты
+    // 4. Последние проекты
     const recentProjects = await prisma.project.findMany({
       take: 5,
       orderBy: { createdAt: 'desc' },
@@ -54,11 +98,12 @@ export async function GET() {
         status: true,
         cost: true,
         address: true,
+        deadline: true,
         createdAt: true
       }
     });
 
-    // 6. Последние финансовые операции
+    // 5. Последние финансовые операции
     const recentTransactions = await prisma.projectTransaction.findMany({
       take: 8,
       orderBy: { date: 'desc' },
@@ -73,13 +118,24 @@ export async function GET() {
       }
     });
 
-    // 6.1 Материалы на складе (для общей стоимости)
-    const warehouseValueResult = await prisma.warehouseItem.aggregate({
+    // 6. Последние расходы
+    const recentExpenses = await prisma.expense.findMany({
+      take: 5,
+      orderBy: { date: 'desc' },
+      select: {
+        id: true,
+        amount: true,
+        date: true,
+        purpose: true,
+        category: true
+      }
+    });
+
+    const totalWarehouseValue = await prisma.warehouseItem.aggregate({
       _sum: { cost: true }
     });
-    const totalWarehouseValue = warehouseValueResult._sum.cost || 0;
 
-    // 7. Бригады
+    // 8. Бригады
     const totalBrigades = await prisma.brigade.count();
     const activeBrigades = await prisma.brigade.count({
       where: {
@@ -89,7 +145,7 @@ export async function GET() {
       }
     });
 
-    // 8. Графики выплат (последние 7 дней)
+    // 9. Графики выплат (последние 7 дней)
     const last7Days = new Date();
     last7Days.setDate(last7Days.getDate() - 7);
     
@@ -111,7 +167,7 @@ export async function GET() {
       amount: report.totalAmount
     }));
 
-    // 9. Статусы проектов
+    // 10. Статусы проектов
     const projectStatuses = await prisma.project.groupBy({
       by: ['status'],
       _count: true
@@ -122,26 +178,43 @@ export async function GET() {
       count: status._count
     }));
 
+    // 11. Расходы по категориям
+    const expensesByCategory = await prisma.expense.groupBy({
+      by: ['category'],
+      _sum: { amount: true },
+      orderBy: {
+        _sum: { amount: 'desc' }
+      },
+      take: 5
+    });
+
     return NextResponse.json({
       success: true,
       data: {
         stats: {
           totalProjects,
           activeProjects,
+          pausedProjects,
+          completedProjects,
+          overdueProjects,
+          upcomingDeadlines,
           totalEmployees,
           employeesToday,
           avgProjectCost,
           balance,
           totalIncome,
           totalExpense,
+          profitMargin,
           totalBrigades,
           activeBrigades,
           totalWarehouseValue
         },
         recentProjects,
         recentTransactions: recentTransactions || [],
+        recentExpenses: recentExpenses || [],
         salaryChartData,
-        statusChartData
+        statusChartData,
+        expensesByCategory
       }
     });
   } catch (error) {

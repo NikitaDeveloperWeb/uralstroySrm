@@ -907,6 +907,24 @@
         <Execute>
           <option name="pattern" value="powershell -Command &quot;$f='E:\Uralstroy\my-app\app\finance\page.tsx'; $c=[System.IO.File]::ReadAllLines($f,[System.Text.Encoding]::UTF8); $c[447..630]=@(''); [System.IO.File]::WriteAllLines($f,$c,[System.Text.Encoding]::UTF8)&quot;" />
         </Execute>
+        <Execute>
+          <option name="pattern" value="start /b npm run dev" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item &quot;shared\components\projects\KanbanBoard.tsx&quot;, &quot;shared\components\projects\KanbanColumn.tsx&quot;, &quot;shared\components\projects\KanbanCard.tsx&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node sync-funds.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item fix-categories.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="New-Item -ItemType Directory -Force -Path &quot;prisma\migrations\add_settled_amount_to_advances&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="New-Item -ItemType Directory -Force -Path &quot;app\api\projects\[id]&quot;" />
+        </Execute>
       </list>
     </option>
     <option name="autoApprovedReads">

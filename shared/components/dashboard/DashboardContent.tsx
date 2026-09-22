@@ -8,12 +8,17 @@ import { MonthlyPlanTable } from '@/shared/components/dashboard/MonthlyPlanTable
 interface DashboardStats {
   totalProjects: number;
   activeProjects: number;
+  pausedProjects: number;
+  completedProjects: number;
+  overdueProjects: number;
+  upcomingDeadlines: number;
   totalEmployees: number;
   employeesToday: number;
   avgProjectCost: number;
   balance: number;
   totalIncome: number;
   totalExpense: number;
+  profitMargin: number;
   totalBrigades: number;
   activeBrigades: number;
   totalWarehouseValue: number;
@@ -25,15 +30,8 @@ interface Project {
   status: string;
   cost: number;
   address: string;
+  deadline: string;
   createdAt: string;
-}
-
-interface WarehouseItem {
-  id: number;
-  name: string;
-  quantity: number;
-  unit: string;
-  cost: number;
 }
 
 interface Transaction {
@@ -42,6 +40,21 @@ interface Transaction {
   date: string;
   comment: string | null;
   project?: { name: string } | null;
+}
+
+interface Expense {
+  id: number;
+  amount: number;
+  date: string;
+  purpose: string;
+  category: string;
+}
+
+interface LowStockItem {
+  id: number;
+  name: string;
+  quantity: number;
+  unit: string;
 }
 
 interface SalaryChart {
@@ -54,13 +67,19 @@ interface StatusChart {
   count: number;
 }
 
+interface ExpenseByCategory {
+  category: string;
+  _sum: { amount: number };
+}
+
 export function DashboardContent() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentProjects, setRecentProjects] = useState<Project[]>([]);
-  const [warehouseItems, setWarehouseItems] = useState<WarehouseItem[]>([]);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [recentExpenses, setRecentExpenses] = useState<Expense[]>([]);
   const [salaryChartData, setSalaryChartData] = useState<SalaryChart[]>([]);
   const [statusChartData, setStatusChartData] = useState<StatusChart[]>([]);
+  const [expensesByCategory, setExpensesByCategory] = useState<ExpenseByCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [isBalanceModalOpen, setIsBalanceModalOpen] = useState(false);
@@ -75,7 +94,7 @@ export function DashboardContent() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = res.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/"/g, '') || 'backup.db';
+      a.download = res.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/\"/g, '') || 'backup.db';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -95,10 +114,11 @@ export function DashboardContent() {
         if (data.success) {
           setStats(data.data.stats);
           setRecentProjects(data.data.recentProjects);
-          setWarehouseItems(data.data.warehouseItems);
           setRecentTransactions(data.data.recentTransactions || []);
+          setRecentExpenses(data.data.recentExpenses || []);
           setSalaryChartData(data.data.salaryChartData);
           setStatusChartData(data.data.statusChartData);
+          setExpensesByCategory(data.data.expensesByCategory || []);
         }
         setLoading(false);
       })
@@ -123,14 +143,22 @@ export function DashboardContent() {
     active: { bg: 'bg-green-100', text: 'text-green-800' },
     completed: { bg: 'bg-blue-100', text: 'text-blue-800' },
     paused: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
-    cancelled: { bg: 'bg-red-100', text: 'text-red-800' }
+    cancelled: { bg: 'bg-red-100', text: 'text-red-800' },
+    'создан': { bg: 'bg-blue-100', text: 'text-blue-800' },
+    'в работе': { bg: 'bg-green-100', text: 'text-green-800' },
+    'на паузе': { bg: 'bg-yellow-100', text: 'text-yellow-800' },
+    'завершен': { bg: 'bg-gray-100', text: 'text-gray-800' }
   };
 
   const statusLabels: Record<string, string> = {
     active: 'Активные',
     completed: 'Завершенные',
     paused: 'Приостановленные',
-    cancelled: 'Отмененные'
+    cancelled: 'Отмененные',
+    'создан': 'Создан',
+    'в работе': 'В работе',
+    'на паузе': 'На паузе',
+    'завершен': 'Завершен'
   };
 
   const maxSalary = Math.max(...salaryChartData.map(d => d.amount), 1);
@@ -157,7 +185,7 @@ export function DashboardContent() {
         </button>
       </div>
 
-      {/* Статистика с градиентами */}
+      {/* KPI карточки */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">
           <div className="flex items-center justify-between">
@@ -193,17 +221,6 @@ export function DashboardContent() {
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-purple-100 text-sm">Средний проект</p>
-              <p className="text-4xl font-bold mt-2">{(stats?.avgProjectCost || 0).toLocaleString('ru-RU')}</p>
-              <p className="text-purple-100 text-xs mt-2">рублей</p>
-            </div>
-            <div className="text-5xl opacity-30">💰</div>
-          </div>
-        </div>
-
         <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl shadow-lg p-6 text-white">
           <div className="flex items-center justify-between">
             <div>
@@ -214,30 +231,103 @@ export function DashboardContent() {
             <div className="text-5xl opacity-30">📊</div>
           </div>
         </div>
+
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl shadow-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-100 text-sm">Прибыль</p>
+              <p className="text-4xl font-bold mt-2">{stats?.profitMargin || 0}%</p>
+              <p className="text-purple-100 text-xs mt-2">маржинальность</p>
+            </div>
+            <div className="text-5xl opacity-30">💰</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Предупреждения */}
+      {(stats?.overdueProjects ?? 0) > 0 && (
+        <div className="bg-red-50 dark:bg-red-950/30 border-l-4 border-red-500 rounded-lg p-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">⚠️</span>
+            <div>
+              <h4 className="font-semibold text-red-900 dark:text-red-400">Просроченные проекты</h4>
+              <p className="text-sm text-red-700 dark:text-red-300">
+                {stats?.overdueProjects} проект(ов) с просроченным дедлайном
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {(stats?.upcomingDeadlines ?? 0) > 0 && (
+        <div className="bg-yellow-50 dark:bg-yellow-950/30 border-l-4 border-yellow-500 rounded-lg p-4">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">📅</span>
+            <div>
+              <h4 className="font-semibold text-yellow-900 dark:text-yellow-400">Ближайшие дедлайны</h4>
+              <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                {stats?.upcomingDeadlines} проект(ов) завершится на этой неделе
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Финансовые показатели */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <span className="text-xl">💵</span> Доходы
+          </h3>
+          <p className="text-3xl font-bold text-green-600">{(stats?.totalIncome || 0).toLocaleString('ru-RU')} ₽</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-2">Всего поступлений</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <span className="text-xl">💸</span> Расходы
+          </h3>
+          <p className="text-3xl font-bold text-red-600">{(stats?.totalExpense || 0).toLocaleString('ru-RU')} ₽</p>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-2">Всего расходов</p>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <span className="text-xl">📈</span> Прибыль
+          </h3>
+          <p className={`text-3xl font-bold ${((stats?.balance || 0) >= 0) ? 'text-green-600' : 'text-red-600'}`}>
+            {(stats?.balance || 0).toLocaleString('ru-RU')} ₽
+          </p>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-2">Чистая прибыль</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Последние проекты */}
-        <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700 dark:border-slate-700">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white dark:text-white mb-4 flex items-center gap-2">
-            <span className="text-xl">📋</span>
-            Последние проекты
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <span className="text-xl">📋</span> Последние проекты
           </h3>
           <div className="space-y-3">
             {recentProjects.map(project => (
-              <div key={project.id} className="group p-4 bg-gray-50 dark:bg-slate-700 dark:bg-slate-750 rounded-lg hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors">
+              <div key={project.id} className="group p-4 bg-gray-50 dark:bg-slate-700 rounded-lg hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <div className="font-semibold text-gray-900 dark:text-white dark:text-white group-hover:text-blue-700 transition-colors">
+                    <div className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-700 transition-colors">
                       {project.name}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-slate-400 dark:text-slate-400 mt-1">{project.address}</div>
+                    <div className="text-xs text-gray-500 dark:text-slate-400 mt-1">{project.address}</div>
+                    {project.deadline && (
+                      <div className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+                        Дедлайн: {new Date(project.deadline).toLocaleDateString('ru-RU')}
+                      </div>
+                    )}
                   </div>
                   <div className="text-right ml-3">
-                    <div className="text-sm font-bold text-gray-900 dark:text-white dark:text-white">
+                    <div className="text-sm font-bold text-gray-900 dark:text-white">
                       {(project.cost || 0).toLocaleString('ru-RU')} ₽
                     </div>
-                    <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${statusColors[project.status]?.bg || 'bg-gray-100 dark:bg-slate-700'} ${statusColors[project.status]?.text || 'text-gray-800 dark:text-slate-200'}`}>
+                    <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${statusColors[project.status]?.bg || 'bg-gray-100'} ${statusColors[project.status]?.text || 'text-gray-800'}`}>
                       {statusLabels[project.status] || project.status}
                     </span>
                   </div>
@@ -247,29 +337,28 @@ export function DashboardContent() {
           </div>
         </div>
 
-        {/* Последние финансовые операции */}
+        {/* Последние операции */}
         <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
           <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <span className="text-xl">💳</span>
-            Последние операции
+            <span className="text-xl">💳</span> Операции
           </h3>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {recentTransactions.map(tx => (
-              <div key={tx.id} className="p-3 bg-gray-50 dark:bg-slate-700 dark:bg-slate-750 rounded-lg hover:bg-amber-50 dark:hover:bg-slate-700 transition-colors">
+              <div key={tx.id} className="p-3 bg-gray-50 dark:bg-slate-700 rounded-lg hover:bg-amber-50 dark:hover:bg-slate-700 transition-colors">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white dark:text-white">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
                       {tx.comment || 'Операция'}
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-slate-400 dark:text-slate-400 mt-1">
+                    <div className="text-xs text-gray-500 dark:text-slate-400 mt-1">
                       {tx.project?.name || 'Без проекта'}
                     </div>
-                    <div className="text-xs text-gray-400 dark:text-slate-500 dark:text-slate-500 mt-0.5">
+                    <div className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
                       {new Date(tx.date).toLocaleDateString('ru-RU')}
                     </div>
                   </div>
                   <div className="text-right ml-3">
-                    <div className="text-sm font-bold text-amber-700">
+                    <div className="text-sm font-bold text-green-700">
                       {tx.amount.toLocaleString('ru-RU')} ₽
                     </div>
                   </div>
@@ -278,18 +367,89 @@ export function DashboardContent() {
             ))}
           </div>
           {recentTransactions.length === 0 && (
-            <div className="text-center py-8 text-gray-400 dark:text-slate-500 dark:text-slate-500">
+            <div className="text-center py-8 text-gray-400 dark:text-slate-500">
               <div className="text-4xl mb-2">📭</div>
               <p className="text-sm">Нет операций</p>
             </div>
           )}
         </div>
 
-        {/* Бригады и статусы */}
-        <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700 dark:border-slate-700">
-          <h3 className="text-lg font-bold text-gray-900 dark:text-white dark:text-white mb-4 flex items-center gap-2">
-            <span className="text-xl">👷</span>
-            Бригады
+        {/* Последние расходы */}
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <span className="text-xl">🧾</span> Расходы
+          </h3>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {recentExpenses.map(exp => (
+              <div key={exp.id} className="p-3 bg-gray-50 dark:bg-slate-700 rounded-lg hover:bg-red-50 dark:hover:bg-slate-700 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {exp.purpose || 'Расход'}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-slate-400 mt-1">{exp.category}</div>
+                    <div className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
+                      {new Date(exp.date).toLocaleDateString('ru-RU')}
+                    </div>
+                  </div>
+                  <div className="text-right ml-3">
+                    <div className="text-sm font-bold text-red-700">
+                      {exp.amount.toLocaleString('ru-RU')} ₽
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          {recentExpenses.length === 0 && (
+            <div className="text-center py-8 text-gray-400 dark:text-slate-500">
+              <div className="text-4xl mb-2">📭</div>
+              <p className="text-sm">Нет расходов</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Расходы по категориям */}
+      {expensesByCategory.length > 0 && (
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <span className="text-xl">📊</span> Расходы по категориям
+          </h3>
+          <div className="space-y-3">
+            {expensesByCategory.map((item, idx) => {
+              const total = expensesByCategory.reduce((sum, i) => sum + i._sum.amount, 0);
+              const percent = total > 0 ? Math.round((item._sum.amount / total) * 100) : 0;
+              const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-purple-500'];
+              return (
+                <div key={idx} className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <div className="flex justify-between mb-1">
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">{item.category}</span>
+                      <span className="text-sm text-gray-600 dark:text-slate-400">{percent}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+                      <div
+                        className={`${colors[idx % colors.length]} h-2 rounded-full transition-all`}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                  <div className="w-32 text-right">
+                    <span className="text-sm font-bold text-red-600">{item._sum.amount.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Бригады и статусы */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <span className="text-xl">👷</span> Бригады
           </h3>
           <div className="space-y-4">
             <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 rounded-lg">
@@ -311,81 +471,91 @@ export function DashboardContent() {
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Круговая диаграмма статусов */}
-          {totalStatus > 0 && (
-            <div className="mt-6">
-              <h4 className="text-sm font-semibold text-gray-700 dark:text-slate-300 dark:text-slate-300 mb-3">Статусы проектов</h4>
-              <div className="flex items-center gap-4">
-                <div className="relative w-24 h-24 flex-shrink-0">
-                  <svg viewBox="0 0 36 36" className="w-24 h-24 transform -rotate-90">
-                    {(() => {
-                      let cumulativePercent = 0;
-                      const colors: Record<string, string> = {
-                        active: '#22c55e',
-                        completed: '#3b82f6',
-                        paused: '#eab308',
-                        cancelled: '#ef4444'
-                      };
-                      return statusChartData.map((status, index) => {
-                        const percent = (status.count / totalStatus) * 100;
-                        const strokeDasharray = `${percent} ${100 - percent}`;
-                        const strokeDashoffset = -cumulativePercent;
-                        cumulativePercent += percent;
-                        return (
-                          <circle
-                            key={status.name}
-                            cx="18"
-                            cy="18"
-                            r="15.915"
-                            fill="transparent"
-                            stroke={colors[status.name] || '#9ca3af'}
-                            strokeWidth="3"
-                            strokeDasharray={strokeDasharray}
-                            strokeDashoffset={strokeDashoffset}
-                          />
-                        );
-                      });
-                    })()}
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-xs font-bold text-gray-700 dark:text-slate-300 dark:text-slate-300">{totalStatus}</span>
-                  </div>
-                </div>
-                <div className="flex-1 space-y-2">
-                  {statusChartData.map(status => {
-                    const percent = totalStatus > 0 ? Math.round((status.count / totalStatus) * 100) : 0;
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
+          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <span className="text-xl">📊</span> Статусы проектов
+          </h3>
+          {totalStatus > 0 ? (
+            <div className="flex items-center gap-6">
+              <div className="relative w-28 h-28 flex-shrink-0">
+                <svg viewBox="0 0 36 36" className="w-28 h-28 transform -rotate-90">
+                  {(() => {
+                    let cumulativePercent = 0;
                     const colors: Record<string, string> = {
-                      active: 'bg-green-500',
-                      completed: 'bg-blue-500',
-                      paused: 'bg-yellow-500',
-                      cancelled: 'bg-red-500'
+                      active: '#22c55e',
+                      completed: '#3b82f6',
+                      paused: '#eab308',
+                      cancelled: '#ef4444',
+                      'создан': '#3b82f6',
+                      'в работе': '#22c55e',
+                      'на паузе': '#eab308',
+                      'завершен': '#6b7280'
                     };
-                    return (
-                      <div key={status.name} className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${colors[status.name] || 'bg-gray-50 dark:bg-slate-7000'}`} />
-                        <span className="text-xs text-gray-600 dark:text-slate-300 dark:text-slate-400 flex-1">{statusLabels[status.name] || status.name}</span>
-                        <span className="text-xs font-bold text-gray-900 dark:text-white dark:text-white">{percent}%</span>
-                      </div>
-                    );
-                  })}
+                    return statusChartData.map((status) => {
+                      const percent = (status.count / totalStatus) * 100;
+                      const strokeDasharray = `${percent} ${100 - percent}`;
+                      const strokeDashoffset = -cumulativePercent;
+                      cumulativePercent += percent;
+                      return (
+                        <circle
+                          key={status.name}
+                          cx="18"
+                          cy="18"
+                          r="15.915"
+                          fill="transparent"
+                          stroke={colors[status.name] || '#9ca3af'}
+                          strokeWidth="3"
+                          strokeDasharray={strokeDasharray}
+                          strokeDashoffset={strokeDashoffset}
+                        />
+                      );
+                    });
+                  })()}
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-sm font-bold text-gray-700 dark:text-slate-300">{totalStatus}</span>
                 </div>
               </div>
+              <div className="flex-1 space-y-2">
+                {statusChartData.map(status => {
+                  const percent = totalStatus > 0 ? Math.round((status.count / totalStatus) * 100) : 0;
+                  const colors: Record<string, string> = {
+                    active: 'bg-green-500',
+                    completed: 'bg-blue-500',
+                    paused: 'bg-yellow-500',
+                    cancelled: 'bg-red-500',
+                    'создан': 'bg-blue-500',
+                    'в работе': 'bg-green-500',
+                    'на паузе': 'bg-yellow-500',
+                    'завершен': 'bg-gray-500'
+                  };
+                  return (
+                    <div key={status.name} className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${colors[status.name] || 'bg-gray-500'}`} />
+                      <span className="text-xs text-gray-600 dark:text-slate-300 flex-1">{statusLabels[status.name] || status.name}</span>
+                      <span className="text-xs font-bold text-gray-900 dark:text-white">{percent}%</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
+          ) : (
+            <p className="text-center text-gray-400 dark:text-slate-500 py-8">Нет данных</p>
           )}
         </div>
       </div>
 
       {/* График выплат */}
       {salaryChartData.length > 0 && (
-        <div className="bg-white dark:bg-slate-800 dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700 dark:border-slate-700">
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-gray-100 dark:border-slate-700">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white dark:text-white flex items-center gap-2">
-              <span className="text-xl">📈</span>
-              Динамика выплат
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <span className="text-xl">📈</span> Динамика выплат
             </h3>
             <div className="text-right">
-              <p className="text-sm text-gray-600 dark:text-slate-300 dark:text-slate-400">Общая сумма</p>
+              <p className="text-sm text-gray-600 dark:text-slate-300">Общая сумма</p>
               <p className="text-xl font-bold text-[#1976d2]">
                 {salaryChartData.reduce((sum, d) => sum + d.amount, 0).toLocaleString('ru-RU')} ₽
               </p>
@@ -406,7 +576,7 @@ export function DashboardContent() {
                       {item.amount.toLocaleString('ru-RU')} ₽
                     </div>
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-slate-400 dark:text-slate-400 pt-2">{item.date.split('-')[2]}.{item.date.split('-')[1]}</div>
+                  <div className="text-xs text-gray-500 dark:text-slate-400 pt-2">{item.date.split('-')[2]}.{item.date.split('-')[1]}</div>
                 </div>
               );
             })}

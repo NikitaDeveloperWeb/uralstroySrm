@@ -66,6 +66,7 @@ export function ProjectBalanceModal({ isOpen, onClose }: ProjectBalanceModalProp
   const totalPrepayment = data.reduce((sum, item) => sum + (item.prepayment || 0), 0);
   const totalPlanned = data.reduce((sum, item) => sum + item.totalPlannedPayments, 0);
   const totalAll = totalPrepayment + totalPlanned;
+  const totalAvailable = Math.max(0, totalCost - totalAll); // Сколько можно получить
   const avgCompletion = data.length > 0
     ? Math.round(data.reduce((sum, item) => sum + item.completionPercent, 0) / data.length)
     : 0;
@@ -152,6 +153,17 @@ export function ProjectBalanceModal({ isOpen, onClose }: ProjectBalanceModalProp
               <span className="text-amber-100 text-sm">Среднее выполнение</span>
             </div>
             <p className="text-3xl font-bold">{avgCompletion}%</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-teal-500 to-teal-600 rounded-xl p-4 text-white">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-2xl">💵</span>
+              <span className="text-teal-100 text-sm">Можно получить</span>
+            </div>
+            <p className="text-2xl font-bold">{formatCurrency(totalAvailable)}</p>
+            <p className="text-xs text-teal-100 mt-1">
+              Остаток по всем объектам
+            </p>
           </div>
         </div>
 

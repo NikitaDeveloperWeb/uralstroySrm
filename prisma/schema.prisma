@@ -698,15 +698,16 @@ model ExpenseCategory {
 }
 
 model EmployeeAdvance {
-  id          Int      @id @default(autoincrement())
-  employeeId  Int
-  employeeName String
-  amount      Int
-  date        DateTime
-  purpose     String?
-  status      String   @default("active") // active, settled
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            Int      @id @default(autoincrement())
+  employeeId    Int
+  employeeName  String
+  amount        Int
+  settledAmount Int      @default(0)
+  date          DateTime
+  purpose       String?
+  status        String   @default("active") // active, settled
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   @@index([employeeId])
   @@index([date])

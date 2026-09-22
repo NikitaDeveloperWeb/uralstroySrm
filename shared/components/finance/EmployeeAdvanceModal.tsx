@@ -10,6 +10,8 @@ interface Advance {
   employeeId: number;
   employeeName: string;
   amount: number;
+  settledAmount?: number;
+  remaining?: number;
   date: string;
   purpose: string | null;
   status: string;
@@ -32,6 +34,14 @@ export function EmployeeAdvanceModal({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [showSettleForm, setShowSettleForm] = useState(false);
+  const [settlingAdvanceId, setSettlingAdvanceId] = useState<number | null>(null);
+
+  // Settle form state
+  const [settleAmount, setSettleAmount] = useState('');
+  const [settlePurpose, setSettlePurpose] = useState('');
+  const [settleCategory, setSettleCategory] = useState('Подотчет');
+  const [settleDate, setSettleDate] = useState(new Date().toISOString().split('T')[0]);
 
   // Form state
   const [selectedEmployee, setSelectedEmployee] = useState('');
@@ -133,6 +143,58 @@ export function EmployeeAdvanceModal({
     } catch (err) {
       console.error('Failed to settle advance:', err);
       alert('Ошибка при обновлении подотчета');
+    }
+  };
+
+  const handleSettleInExpenses = async (advanceId: number) => {
+    if (!settleAmount || !settlePurpose) {
+      alert('Заполните сумму и цель расхода');
+      return;
+    }
+
+    const advance = advances.find(a => a.id === advanceId);
+    if (!advance) return;
+
+    const remaining = advance.remaining ?? (advance.amount - (advance.settledAmount || 0));
+    const amount = Math.min(Number(settleAmount), remaining);
+
+    if (amount <= 0) {
+      alert('Сумма должна быть больше 0');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch('/api/employee-advances/settle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          advanceId,
+          amount,
+          purpose: settlePurpose,
+          category: settleCategory,
+          date: settleDate,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.message || 'Ошибка при списании');
+        return;
+      }
+
+      setShowSettleForm(false);
+      setSettlingAdvanceId(null);
+      setSettleAmount('');
+      setSettlePurpose('');
+      setSettleCategory('Подотчет');
+      setSettleDate(new Date().toISOString().split('T')[0]);
+      await fetchAdvances();
+    } catch (err) {
+      console.error('Failed to settle in expenses:', err);
+      alert('Ошибка при списании в расходы');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -287,6 +349,83 @@ export function EmployeeAdvanceModal({
           </div>
         )}
 
+        {/* Форма списания в расходы */}
+        {showSettleForm && settlingAdvanceId && (
+          <div className="bg-gray-50 dark:bg-slate-700 rounded-lg p-4 space-y-4 border-2 border-blue-300 dark:border-blue-600">
+            <h3 className="font-semibold text-gray-900 dark:text-white">Списать в расходы</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                  Сумма (₽) *
+                </label>
+                <input
+                  type="number"
+                  value={settleAmount}
+                  onChange={(e) => setSettleAmount(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                  Дата
+                </label>
+                <input
+                  type="date"
+                  value={settleDate}
+                  onChange={(e) => setSettleDate(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                Цель расхода *
+              </label>
+              <input
+                type="text"
+                value={settlePurpose}
+                onChange={(e) => setSettlePurpose(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+                placeholder="Например: Закупка материалов"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                Категория
+              </label>
+              <input
+                type="text"
+                value={settleCategory}
+                onChange={(e) => setSettleCategory(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+              />
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                onClick={() => handleSettleInExpenses(settlingAdvanceId)}
+                disabled={saving}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-3 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {saving ? 'Списание...' : 'Списать'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowSettleForm(false);
+                  setSettlingAdvanceId(null);
+                }}
+                className="flex-1 bg-gray-200 dark:bg-slate-600 hover:bg-gray-300 dark:hover:bg-slate-500 text-gray-700 dark:text-slate-300 py-3 px-4 rounded-lg font-semibold transition-colors"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Список подотчетов */}
         {loading ? (
           <div className="flex justify-center py-8">
@@ -323,19 +462,40 @@ export function EmployeeAdvanceModal({
                       {formatDate(advance.date)}
                       {advance.purpose && ` — ${advance.purpose}`}
                     </p>
+                    {advance.status === 'active' && (
+                      <div className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+                        Выдано: {formatCurrency(advance.amount)} ₽ · 
+                        Списано: {formatCurrency(advance.settledAmount || 0)} ₽ · 
+                        Остаток: {formatCurrency(advance.remaining ?? (advance.amount - (advance.settledAmount || 0)))} ₽
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <span className="text-lg font-bold text-gray-900 dark:text-white">
                       {formatCurrency(advance.amount)} ₽
                     </span>
                     {advance.status === 'active' ? (
-                      <button
-                        onClick={() => handleSettleAdvance(advance.id)}
-                        className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 transition-colors p-1"
-                        title="Отметить как погашенный"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setSettlingAdvanceId(advance.id);
+                            const remaining = advance.remaining ?? (advance.amount - (advance.settledAmount || 0));
+                            setSettleAmount(String(remaining));
+                            setShowSettleForm(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors p-1"
+                          title="Списать в расходы"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleSettleAdvance(advance.id)}
+                          className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 transition-colors p-1"
+                          title="Отметить как погашенный"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                        </button>
+                      </div>
                     ) : null}
                     <button
                       onClick={() => handleDeleteAdvance(advance.id)}

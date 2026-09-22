@@ -23,7 +23,13 @@ export async function GET(request: NextRequest) {
       orderBy: { date: 'desc' },
     });
 
-    return successResponse(advances);
+    // Добавляем remaining для каждого подотчета
+    const advancesWithRemaining = advances.map(a => ({
+      ...a,
+      remaining: a.amount - a.settledAmount
+    }));
+
+    return successResponse(advancesWithRemaining);
   } catch (error) {
     console.error('GET /api/employee-advances error:', error);
     return errorResponse('Не удалось получить подотчетные', 500);
