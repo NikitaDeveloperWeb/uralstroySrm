@@ -5,7 +5,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Modal } from '@/shared/components/ui/Modal';
 import { AddObjectForm } from '@/shared/components/dashboard/AddObjectForm';
 import { useRouter } from 'next/navigation';
-import { Edit2, Trash2, Search } from 'lucide-react';
+import { Edit2, Trash2, Search, Download } from 'lucide-react';
 import { Pagination } from '@/shared/components/ui/Pagination';
 const statusColors: Record<string, string> = {
   создан: 'bg-gray-400',
@@ -44,6 +44,25 @@ export default function ProjectsPage() {
   const [brigadesLoading, setBrigadesLoading] = useState(true);
   const [clients, setClients] = useState<{ id: number; name: string }[]>([]);
   const { confirm, alert } = useAlert();
+
+  const handleExport = async () => {
+    try {
+      const res = await fetch('/api/projects/export');
+      if (!res.ok) throw new Error('Export failed');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `objects_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Не удалось экспортировать данные', { title: 'Ошибка' });
+    }
+  };
 
   const projects = useProjectStore(state => state.projects);
   const fetchProjects = useProjectStore(state => state.fetchProjects);
@@ -221,10 +240,16 @@ export default function ProjectsPage() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white dark:text-white dark:text-white">Объекты</h1>
-          <Button onClick={() => setShowModal(true)} className="bg-[#1976d2] hover:bg-[#1565c0] text-lg font-semibold text-white h-14 px-6 rounded-lg shadow-md">
-            <span className="mr-2">+</span>
-            Добавить объект
-          </Button>
+          <div className="flex gap-3">
+            <Button onClick={handleExport} className="bg-emerald-600 hover:bg-emerald-700 text-lg font-semibold text-white h-14 px-6 rounded-lg shadow-md">
+              <Download className="w-5 h-5 mr-2" />
+              Экспорт Excel
+            </Button>
+            <Button onClick={() => setShowModal(true)} className="bg-[#1976d2] hover:bg-[#1565c0] text-lg font-semibold text-white h-14 px-6 rounded-lg shadow-md">
+              <span className="mr-2">+</span>
+              Добавить объект
+            </Button>
+          </div>
         </div>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">

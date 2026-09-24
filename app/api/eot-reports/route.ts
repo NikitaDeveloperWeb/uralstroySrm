@@ -56,13 +56,27 @@ export async function POST(request: NextRequest) {
       include: { employee: { include: { hourlyRate: true } } },
     });
 
+    // Получаем всех сотрудников с окладом за этот месяц
+    const monthStart = new Date(y, m - 1, 1);
+    const monthEnd = new Date(y, m - 1, d, 23, 59, 59, 999);
+    
+    const employeesWithSalary = await prisma.employee.findMany({
+      where: {
+        paymentType: 'оклад',
+        monthlySalary: { gt: 0 },
+      },
+    });
+
     console.log(`[EOT POST] Date: ${targetDate.toISOString().split('T')[0]}, schedules count: ${schedules.length}`);
+    console.log(`[EOT POST] Employees with оклад: ${employeesWithSalary.length}`);
+    
     schedules.forEach(s => {
       console.log(`[EOT POST]   Employee ${s.employee.fullName}: hours=${s.hours}`);
     });
 
-    if (schedules.length === 0) {
-      return errorResponse('Нет смен за эту дату', 400);
+    // Если есть сотрудники с окладом - добавляем их
+    if (schedules.length === 0 && employeesWithSalary.length === 0) {
+      return errorResponse('Нет смен за эту дату и нет сотрудников с окладом', 400);
     }
 
     const employeeMap = new Map();
@@ -78,16 +92,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Добавляем сотрудников с окладом (если их нет в schedules)
+    for (const emp of employeesWithSalary) {
+      if (!employeeMap.has(emp.id)) {
+        employeeMap.set(emp.id, {
+          hours: 0, // Нет часов, так как это оклад
+          employee: emp,
+          hasSalary: true,
+        });
+      }
+    }
+
     console.log(`[EOT POST] Aggregated hours:`);
     for (const [empId, data] of employeeMap) {
-      console.log(`[EOT POST]   Employee ${data.employee.fullName}: total hours=${data.hours}`);
+      console.log(`[EOT POST]   Employee ${data.employee.fullName}: total hours=${data.hours}, hasSalary=${data.hasSalary}`);
     }
 
     const items = [];
     let totalAmount = 0;
 
     for (const [empId, data] of employeeMap) {
-      const { hours, employee } = data;
+      const { hours, employee, hasSalary } = data;
       const paymentType = employee.paymentType || '';
 
       let salary = 0;
@@ -96,7 +121,21 @@ export async function POST(request: NextRequest) {
       let workAmount = 0;
       let shopReportId: number | null = null;
 
-      if (paymentType.includes('смен')) {
+      // Если сотрудник с окладом
+      if (hasSalary || paymentType === 'оклад') {
+        salary = employee.monthlySalary || 0;
+        // Для ЕОТ делим оклад на количество дней в месяце * количество дат
+        // Но здесь показываем полный оклад за каждый день
+        // Лучше показывать только если это последний день месяца
+        const day = new Date(targetDate).getDate();
+        const daysInMonth = new Date(y, m, 0).getDate();
+        
+        if (day < daysInMonth) {
+          // Это не последний день месяца - делим оклад
+          salary = Math.round((employee.monthlySalary || 0) / daysInMonth);
+        }
+        // Если последний день месяца - полный оклад
+      } else if (paymentType.includes('смен')) {
         rate = employee.hourlyRate?.rate || 0;
         salary = hours * rate;
       } else if (paymentType.includes('сдел')) {
@@ -147,6 +186,10 @@ export async function POST(request: NextRequest) {
         if (quantity) item.quantity = quantity;
         if (workAmount) item.workAmount = workAmount;
         if (shopReportId) item.shopReportId = shopReportId;
+      }
+      // Для оклада
+      if (hasSalary || paymentType === 'оклад') {
+        item.comment = `Оклад: ${employee.monthlySalary || 0} ₽/мес`;
       }
 
       items.push(item);

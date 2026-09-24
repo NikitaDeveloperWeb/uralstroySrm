@@ -1,13 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Wrench, FileText, Trash2, Calendar, Search, Download, Loader2, X } from 'lucide-react';
+import { Wrench, FileText, Trash2, Calendar, Search, Download, Loader2, X, BarChart3 } from 'lucide-react';
 import { Modal } from '@/shared/components/ui/Modal';
 import { Pagination } from '@/shared/components/ui/Pagination';
 import { useAlert } from '@/shared/hooks/useAlert';
 import { exportReportsToPDF, exportSingleReportToPDF } from '@/shared/lib/pdfExport';
 import { fetchShopReports, createShopReport, fetchEmployeesWithSdelnaya, fetchUnitRatesForEmployee } from '@/shared/lib/shop-reports-api';
 import * as XLSX from 'xlsx';
+import { MonthlyReportModal } from '@/shared/components/finance/MonthlyReportModal';
 
 interface Employee {
   id: number;
@@ -88,6 +89,14 @@ interface ReportEntry {
 
 const reportCards = [
   {
+    id: 'monthly',
+    title: 'Общий ежемесячный отчет',
+    description: 'Полная сводка по всей компании: сотрудники, проекты, финансы, поставщики',
+    icon: BarChart3,
+    color: 'bg-gradient-to-br from-purple-500 to-pink-500',
+    hoverColor: 'hover:shadow-xl hover:scale-105',
+  },
+  {
     id: 'цех',
     title: 'Отчет о выполненной работе',
     description: 'Отчет о работе цеха за период',
@@ -132,6 +141,7 @@ export default function ReportsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const REPORTS_PER_PAGE = 10;
   const [isExporting, setIsExporting] = useState(false);
+  const [showMonthlyReport, setShowMonthlyReport] = useState(false);
   const { alert, confirm } = useAlert();
 
   useEffect(() => {
@@ -208,6 +218,10 @@ export default function ReportsPage() {
   };
 
   const handleOpenModal = (type: string) => {
+    if (type === 'monthly') {
+      setShowMonthlyReport(true);
+      return;
+    }
     setSelectedReportType(type);
     setFormData({
       date: new Date().toISOString().split('T')[0],
@@ -345,14 +359,14 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white dark:text-white dark:text-white">Отчеты</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {reportCards.map((card) => {
           const Icon = card.icon;
           return (
             <button
               key={card.id}
               onClick={() => handleOpenModal(card.id)}
-              className={`${card.hoverColor} bg-white dark:bg-slate-800 dark:bg-slate-800 dark:bg-slate-800 rounded-lg shadow-md p-8 text-left transition-all hover:shadow-lg border border-gray-100 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700`}
+              className={`${card.hoverColor} bg-white dark:bg-slate-800 dark:bg-slate-800 dark:bg-slate-800 rounded-lg shadow-md p-8 text-left transition-all hover:shadow-lg border border-gray-100 dark:border-slate-700 dark:border-slate-700 dark:border-slate-700 ${card.id === 'monthly' ? 'lg:col-span-3' : ''}`}
             >
               <div className={`w-16 h-16 ${card.color} rounded-lg flex items-center justify-center mb-4`}>
                 <Icon className="w-8 h-8 text-white" />
@@ -560,6 +574,12 @@ export default function ReportsPage() {
                       itemsPerPage={REPORTS_PER_PAGE}
                     />
                   )}
+
+                  {/* Общий ежемесячный отчет */}
+                  <MonthlyReportModal
+                    isOpen={showMonthlyReport}
+                    onClose={() => setShowMonthlyReport(false)}
+                  />
 
                   <Modal
                     isOpen={isModalOpen}

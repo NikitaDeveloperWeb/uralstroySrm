@@ -18,6 +18,29 @@ export async function PATCH(
     const body = await request.json();
     const validated = updateProjectSchema.parse(body);
 
+    // Извлекаем relation поля и ID поля отдельно
+    const { unitRateId, brigadeId, clientId, ...rest } = validated;
+
+    const data: Record<string, unknown> = { ...rest };
+    
+    // Устанавливаем relation через relation update
+    const relationUpdate: Record<string, unknown> = {};
+    if (unitRateId !== undefined) {
+      relationUpdate.unitRate = unitRateId ? { connect: { id: unitRateId } } : { disconnect: true };
+    }
+    if (brigadeId !== undefined) {
+      relationUpdate.brigade = brigadeId ? { connect: { id: brigadeId } } : { disconnect: true };
+    }
+    if (clientId !== undefined) {
+      relationUpdate.client = clientId ? { connect: { id: clientId } } : { disconnect: true };
+    }
+
+    // Удаляем undefined и read-only значения
+    const readOnlyKeys = ['id', 'createdAt', 'updatedAt', 'materials', 'completedWorks', 'workReports', 'financeReports', 'overheads', 'reports', 'transactions', 'financialPlans', 'schedules', 'shopReports', 'subcontractors', 'expenses', 'movements'];
+    Object.keys(data).forEach(key => {
+      if (data[key] === undefined || readOnlyKeys.includes(key)) delete data[key];
+    });
+
     const existing = await prisma.project.findUnique({ where: { id: numericId } });
     if (!existing) {
       return errorResponse('Проект не найден', 404);
@@ -25,7 +48,10 @@ export async function PATCH(
 
     const project = await prisma.project.update({
       where: { id: numericId },
-      data: validated,
+      data: {
+        ...data,
+        ...relationUpdate
+      },
       include: {
         brigade: true,
         unitRate: true,

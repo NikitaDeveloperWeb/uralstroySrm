@@ -46,7 +46,23 @@ export async function PATCH(
   try {
     const { id } = await context.params;
     const body = await request.json();
-    const validated = updateWarehouseItemSchema.parse(body);
+
+    // Извлекаем и маппим статус отдельно
+    const frontendStatusMap: Record<string, string> = {
+      'in-stock': 'достаточно',
+      'ordered': 'ordered',
+      'достаточно': 'достаточно',
+      'мало': 'мало',
+      'критически мало': 'критически мало',
+      'нет в наличии': 'нет в наличии',
+    };
+
+    const rawStatus = body.status;
+    const mappedStatus = rawStatus ? frontendStatusMap[rawStatus] : undefined;
+
+    // Удаляем статус из body, чтобы Zod не ругался на русские значения
+    const { status: _status, ...restBody } = body;
+    const validated = updateWarehouseItemSchema.parse(restBody);
 
     // Маппинг статусов на значения БД
     const data: Record<string, unknown> = {};
@@ -58,13 +74,7 @@ export async function PATCH(
     if (validated.lotNumber !== undefined) data.lotNumber = validated.lotNumber || null;
     if (validated.cost !== undefined) data.cost = validated.cost;
     if (validated.location !== undefined) data.location = validated.location || 'Склад';
-    if (validated.status !== undefined) {
-      const dbStatusMap: Record<string, string> = {
-        'in-stock': 'достаточно',
-        'ordered': 'ordered',
-      };
-      data.status = dbStatusMap[validated.status] || validated.status;
-    }
+    if (mappedStatus !== undefined) data.status = mappedStatus;
 
     const item = await prisma.warehouseItem.update({
       where: { id: Number(id) },

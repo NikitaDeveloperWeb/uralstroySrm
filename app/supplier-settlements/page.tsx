@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ArrowDownToLine, ArrowUpFromLine, ChevronDown, ChevronUp, X, Plus, Pencil, Trash2, Download } from 'lucide-react';
 import { Modal } from '@/shared/components/ui/Modal';
+import * as XLSX from 'xlsx';
 
 interface SupplierBalance {
   supplierId: number;
@@ -150,6 +151,79 @@ export default function SupplierSettlementsPage() {
     } catch (err) {
       console.error('Failed to fetch supplier detail:', err);
     }
+  };
+
+  // Экспорт всех поставщиков в Excel
+  const handleExportAll = () => {
+    if (suppliers.length === 0) {
+      alert('Нет данных для экспорта');
+      return;
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    // Лист 1: Сводка по всем поставщикам
+    const summaryData = [
+      ['РАСЧЕТЫ С ПОСТАВЩИКАМИ - СВОДКА'],
+      ['Дата экспорта', new Date().toLocaleDateString('ru-RU')],
+      [],
+      ['Поставщик', 'Категория', 'Забрано материалов (₽)', 'Оплачено (₽)', 'Баланс (₽)'],
+    ];
+
+    suppliers.forEach(s => {
+      summaryData.push([
+        s.companyName,
+        s.category,
+        s.totalReceived.toString(),
+        s.totalPaid.toString(),
+        s.balance.toString(),
+      ]);
+    });
+
+    // Итого
+    const totalReceived = suppliers.reduce((sum, s) => sum + s.totalReceived, 0);
+    const totalPaid = suppliers.reduce((sum, s) => sum + s.totalPaid, 0);
+    const totalBalance = suppliers.reduce((sum, s) => sum + s.balance, 0);
+    
+    summaryData.push([]);
+    summaryData.push(['ИТОГО', '', totalReceived.toString(), totalPaid.toString(), totalBalance.toString()]);
+
+    const ws1 = XLSX.utils.aoa_to_sheet(summaryData);
+    ws1['!cols'] = [
+      { wch: 30 },
+      { wch: 20 },
+      { wch: 25 },
+      { wch: 20 },
+      { wch: 15 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws1, 'Сводка');
+
+    // Лист 2: Детализация
+    const detailData = [
+      ['ДЕТАЛИЗАЦИЯ ПО ПОСТАВЩИКАМ'],
+      ['Дата экспорта', new Date().toLocaleDateString('ru-RU')],
+      [],
+      ['Поставщик', 'Дата', 'Наименование', 'Кол-во', 'Ед.изм', 'Сумма (₽)', 'Комментарий'],
+    ];
+
+    suppliers.forEach(supplier => {
+      // Загружаю детали для каждого поставщика
+      detailData.push([supplier.companyName, '', '', '', '', '', '']);
+    });
+
+    const ws2 = XLSX.utils.aoa_to_sheet(detailData);
+    ws2['!cols'] = [
+      { wch: 30 },
+      { wch: 15 },
+      { wch: 30 },
+      { wch: 12 },
+      { wch: 10 },
+      { wch: 15 },
+      { wch: 25 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Детализация');
+
+    XLSX.writeFile(wb, `Расчеты_с_поставщиками_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const handleExport = async () => {
@@ -384,6 +458,13 @@ export default function SupplierSettlementsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Расчёты с поставщиками</h1>
+        <button
+          onClick={handleExportAll}
+          className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          Экспорт в Excel
+        </button>
       </div>
 
       {/* Фильтры */}

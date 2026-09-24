@@ -52,6 +52,7 @@ export async function PATCH(
         ...(validated.employmentType !== undefined && { employmentType: validated.employmentType }),
         ...(validated.brigadeId !== undefined && { brigadeId: validated.brigadeId }),
         ...(validated.hourlyRateId !== undefined && { hourlyRateId: validated.hourlyRateId }),
+        ...(validated.monthlySalary !== undefined && { monthlySalary: validated.monthlySalary }),
         ...(validated.skillIds && validated.skillIds.length > 0 && { skills: { connect: validated.skillIds.map((id: number) => ({ id })) } }),
       },
       include: {

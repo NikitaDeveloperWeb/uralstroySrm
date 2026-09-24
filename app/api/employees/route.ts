@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
         employmentType: validated.employmentType,
         ...(validated.brigadeId !== undefined && { brigadeId: validated.brigadeId }),
         ...(validated.hourlyRateId !== undefined && validated.hourlyRateId !== null && validated.hourlyRateId > 0 && { hourlyRateId: validated.hourlyRateId }),
+        ...(validated.monthlySalary !== undefined && { monthlySalary: validated.monthlySalary }),
         ...(validated.skillIds.length > 0 && { skills: { connect: validated.skillIds.map((id) => ({ id })) } }),
       },
       include: {

@@ -925,6 +925,9 @@
         <Execute>
           <option name="pattern" value="New-Item -ItemType Directory -Force -Path &quot;app\api\projects\[id]&quot;" />
         </Execute>
+        <Execute>
+          <option name="pattern" value="timeout /t 3 /nobreak &gt;nul" />
+        </Execute>
       </list>
     </option>
     <option name="autoApprovedReads">

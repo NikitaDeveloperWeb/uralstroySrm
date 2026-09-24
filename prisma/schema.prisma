@@ -111,10 +111,11 @@ model Employee {
   address        String
   hireDate       DateTime
   workplace      String
-  paymentType    String
+  paymentType    String // "сдельная", "почасовая", "оклад"
   employmentType String
   brigadeId      Int?
   hourlyRateId   Int?
+  monthlySalary  Int? // Оклад (если paymentType = "оклад")
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt
   bonuses        Bonus[]

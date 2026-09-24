@@ -18,9 +18,10 @@ interface Employee {
   address: string;
   hireDate: string;
   workplace: 'цех' | 'монтаж';
-  paymentType: 'сменная' | 'сдельная';
+  paymentType: 'сменная' | 'сдельная' | 'оклад';
   employmentType: 'штат' | 'подработка';
   skills: SkillType[];
+  monthlySalary?: number;
 }
 
 const initialEmployees: Employee[] = [
@@ -65,6 +66,7 @@ const workplaceColors: Record<string, string> = {
 const paymentTypeColors: Record<string, string> = {
   'сменная': 'bg-green-100 text-green-800',
   'сдельная': 'bg-orange-100 text-orange-800',
+  'оклад': 'bg-blue-100 text-blue-800',
 };
 
 const employmentTypeColors: Record<string, string> = {
@@ -103,6 +105,7 @@ export default function EmployeesPage() {
     paymentType: null as HTMLSelectElement | null,
     employmentType: null as HTMLSelectElement | null,
     hourlyRateId: null as HTMLSelectElement | null,
+    monthlySalary: null as HTMLInputElement | null,
   });
   const rateSearchRef = useRef<HTMLInputElement | null>(null);
   const ratePositionRef = useRef<HTMLInputElement | null>(null);
@@ -260,6 +263,7 @@ export default function EmployeesPage() {
       if (formRefs.current.paymentType) formRefs.current.paymentType.value = 'сменная';
       if (formRefs.current.employmentType) formRefs.current.employmentType.value = 'штат';
       if (formRefs.current.hourlyRateId) formRefs.current.hourlyRateId.value = '';
+      if (formRefs.current.monthlySalary) formRefs.current.monthlySalary.value = '';
     }, 0);
   };
 
@@ -268,7 +272,7 @@ export default function EmployeesPage() {
     setFormData({
       ...emp,
       workplace: emp.workplace as 'цех' | 'монтаж',
-      paymentType: emp.paymentType as 'сменная' | 'сдельная',
+      paymentType: emp.paymentType as 'сменная' | 'сдельная' | 'оклад',
       employmentType: emp.employmentType as 'штат' | 'подработка',
     });
     setFormDataHourlyRateId(emp.id ? (emp as any).hourlyRateId || null : null);
@@ -283,17 +287,21 @@ export default function EmployeesPage() {
       if (formRefs.current.paymentType) formRefs.current.paymentType.value = emp.paymentType;
       if (formRefs.current.employmentType) formRefs.current.employmentType.value = emp.employmentType;
       if (formRefs.current.hourlyRateId) formRefs.current.hourlyRateId.value = (emp as any).hourlyRateId || '';
+      if (formRefs.current.monthlySalary) formRefs.current.monthlySalary.value = String((emp as any).monthlySalary || '');
     }, 0);
   };
 
   const handleSave = async () => {
     try {
+      const birthDateVal = formRefs.current.birthDate?.value;
+      const hireDateVal = formRefs.current.hireDate?.value;
+
       const employeeData: any = {
         fullName: formRefs.current.fullName?.value?.trim(),
-        birthDate: formRefs.current.birthDate?.value,
+        birthDate: birthDateVal ? new Date(birthDateVal) : undefined,
         phone: formRefs.current.phone?.value?.trim(),
         address: formRefs.current.address?.value?.trim(),
-        hireDate: formRefs.current.hireDate?.value,
+        hireDate: hireDateVal ? new Date(hireDateVal) : undefined,
         workplace: formRefs.current.workplace?.value,
         paymentType: formRefs.current.paymentType?.value,
         employmentType: formRefs.current.employmentType?.value,
@@ -308,6 +316,13 @@ export default function EmployeesPage() {
       const rateId = formRefs.current.hourlyRateId?.value;
       if (rateId) {
         employeeData.hourlyRateId = Number(rateId);
+      }
+
+      const monthlySalaryValue = formRefs.current.monthlySalary?.value;
+      if (monthlySalaryValue && monthlySalaryValue.trim() !== '') {
+        employeeData.monthlySalary = Number(monthlySalaryValue);
+      } else if (formData.paymentType === 'оклад') {
+        employeeData.monthlySalary = null;
       }
 
       if (editingEmployee) {
@@ -958,11 +973,13 @@ export default function EmployeesPage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 dark:text-slate-300 mb-1">Тип оплаты</label>
               <select
                 ref={el => { formRefs.current.paymentType = el; }}
-                defaultValue="см��нная"
+                defaultValue="сменная"
+                onChange={(e) => setFormData(prev => ({ ...prev, paymentType: e.target.value as any }))}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
               >
                 <option value="сменная">Сменная</option>
                 <option value="сдельная">Сдельная</option>
+                <option value="оклад">Оклад</option>
               </select>
             </div>
             <div>
@@ -991,6 +1008,17 @@ export default function EmployeesPage() {
                 ))}
               </select>
             </div>
+            {formData.paymentType === 'оклад' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 dark:text-slate-300 dark:text-slate-300 mb-1">Ежемесячный оклад (₽)</label>
+                <input
+                  ref={el => { formRefs.current.monthlySalary = el; }}
+                  type="number"
+                  min="0"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:border-slate-600 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1976d2] dark:bg-slate-700 dark:text-white"
+                />
+              </div>
+            )}
           </div>
           {/* Навыки */}
           <div>

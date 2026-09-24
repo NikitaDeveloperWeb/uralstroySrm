@@ -12,17 +12,17 @@ export async function POST(request: NextRequest) {
       return errorResponse('Укажите обязательные поля: поставщик, название, категория, количество и единица', 400);
     }
 
-    const qty = Number(quantity);
-    const amt = Number(amount);
-    const prc = price ? Number(price) : null;
-    const disc = discount ? Number(discount) : 0;
+    const qty = parseFloat(String(quantity));
+    const amt = parseFloat(String(amount));
+    const prc = price ? parseFloat(String(price)) : null;
+    const disc = discount ? parseFloat(String(discount)) : 0;
 
     if (isNaN(qty) || qty <= 0) {
       return errorResponse('Некорректное значение количества', 400);
     }
 
     const calculatedAmount = qty * (prc || 0) * (1 - disc / 100);
-    const finalAmount = amt > 0 ? amt : Math.round(calculatedAmount * 100) / 100;
+    const finalAmount = !isNaN(amt) && amt > 0 ? amt : Math.round(calculatedAmount * 100) / 100;
 
     const dateParsed = date ? new Date(date) : new Date();
 

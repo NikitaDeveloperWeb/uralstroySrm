@@ -94,6 +94,7 @@ export const createEmployeeSchema = z.object({
   skillIds: z.array(z.coerce.number().int().positive()).default([]),
   brigadeId: z.coerce.number().int().positive().optional().nullable(),
   hourlyRateId: z.coerce.number().int().positive().optional().nullable(),
+  monthlySalary: z.coerce.number().int().nonnegative().optional().nullable(),
 });
 
 export const updateEmployeeSchema = z.object({
@@ -108,6 +109,7 @@ export const updateEmployeeSchema = z.object({
   skillIds: z.array(z.coerce.number().int().positive()).optional(),
   brigadeId: z.coerce.number().int().positive().optional().nullable(),
   hourlyRateId: z.coerce.number().int().positive().optional().nullable(),
+  monthlySalary: z.coerce.number().int().nonnegative().optional().nullable(),
 });
 
 // ============================================================
