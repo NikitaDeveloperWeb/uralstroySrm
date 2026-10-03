@@ -267,9 +267,9 @@ export default function SubcontractorsPage() {
   }, [supplierModalOpen]);
 
   const filteredSuppliers = suppliers.filter(sup =>
-    sup.companyName.toLowerCase().includes(supplierSearchQuery.toLowerCase()) ||
-    sup.contactPerson.toLowerCase().includes(supplierSearchQuery.toLowerCase())
-  );
+    sup?.companyName?.toLowerCase().includes(supplierSearchQuery.toLowerCase()) ||
+    sup?.contactPerson?.toLowerCase().includes(supplierSearchQuery.toLowerCase())
+  ).filter(Boolean);
 
   const supplierTotalPages = Math.ceil(filteredSuppliers.length / supplierItemsPerPage);
   const paginatedSuppliers = filteredSuppliers.slice(

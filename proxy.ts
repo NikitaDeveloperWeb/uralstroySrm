@@ -1,36 +1,67 @@
-import { NextResponse, NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { getAuthUser } from '@/shared/lib/auth';
 
-export function proxy(request: NextRequest) {
-  const { pathname } = new URL(request.url);
+const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout'];
 
-  // Allow login page
-  if (pathname === '/login') {
+const MANAGER_ALLOWED_PATHS = [
+  '/projects',
+  '/kanban',
+  '/clients',
+  '/documents',
+  '/api/projects',
+  '/api/clients',
+  '/api/documents',
+  '/help',
+  '/api/notifications',
+];
+
+function isManagerAllowed(path: string): boolean {
+  return MANAGER_ALLOWED_PATHS.some(
+    (allowed) => path === allowed || path.startsWith(allowed + '/')
+  );
+}
+
+export default function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
     return NextResponse.next();
   }
 
-  // Allow API auth endpoints (login/logout)
-  if (pathname.startsWith('/api/auth/')) {
-    return NextResponse.next();
+  return handleAuth(request, pathname);
+}
+
+async function handleAuth(request: NextRequest, pathname: string) {
+  const user = await getAuthUser();
+
+  if (!user) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
-  // Allow static files
-  if (
-    pathname.startsWith('/_next/') ||
-    pathname.startsWith('/favicon.ico')
-  ) {
-    return NextResponse.next();
+  if (user.role !== 'ADMIN') {
+    if (!isManagerAllowed(pathname)) {
+      if (pathname.startsWith('/api/')) {
+        return NextResponse.json(
+          { success: false, error: 'Доступ запрещен.' },
+          { status: 403 }
+        );
+      }
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
   }
 
-  // Check session cookie for everything else
-  const session = request.cookies.get('session')?.value;
+  const response = NextResponse.next();
+  response.headers.set('X-User-Role', user.role);
+  response.headers.set('X-User-Id', String(user.id));
 
-  if (!session) {
-    return NextResponse.redirect(new URL('/login', request.url));
-  }
-
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
-  matcher: ['/((?!node_modules).*)'],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 };

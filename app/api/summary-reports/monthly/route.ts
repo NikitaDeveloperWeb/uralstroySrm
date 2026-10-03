@@ -246,7 +246,24 @@ export async function GET(request: NextRequest) {
     const monthMovementsIn = warehouseMovements.filter(m => m.type === 'incoming').reduce((sum, m) => sum + (m.amount || 0), 0);
     const monthMovementsOut = warehouseMovements.filter(m => m.type === 'outgoing').reduce((sum, m) => sum + (m.amount || 0), 0);
 
-    // 7. ЗАРПЛАТЫ (из EOT отчетов)
+    // 7. ЗАРПЛАТЫ - считаем только ВЫПЛАЧЕННЫЕ суммы из salary_report_items
+    const salaryReports = await prisma.salaryReport.findMany({
+      where: {
+        period: `${month}/${year}`,
+      },
+      include: {
+        items: true,
+      },
+    });
+
+    // Сумма только выплаченных зарплат (isPaid = true)
+    const paidSalaries = salaryReports.reduce((sum, report) => {
+      return sum + report.items
+        .filter(item => item.isPaid)
+        .reduce((itemSum, item) => itemSum + item.amount, 0);
+    }, 0);
+
+    // Общая начисленная зарплата (из ЕОТ)
     const eotReports = await prisma.eOTReport.findMany({
       where: {
         date: {
@@ -309,9 +326,9 @@ export async function GET(request: NextRequest) {
       finances: {
         totalIncome,
         totalExpenses: totalExpensesOnly,
-        totalSalary,
-        profit: totalIncome - totalExpensesOnly,  // Прибыль до вычета зарплат
-        profitMargin: totalIncome > 0 ? ((totalIncome - totalExpensesOnly) / totalIncome * 100) : 0,
+        totalSalary: paidSalaries,
+        profit: totalIncome - totalExpensesOnly - paidSalaries,  // Прибыль с учетом выплаченных зарплат
+        profitMargin: totalIncome > 0 ? ((totalIncome - totalExpensesOnly - paidSalaries) / totalIncome * 100) : 0,
       },
       expenses: {
         byCategory: Object.entries(expensesByCategory).map(([name, data]) => ({
@@ -336,7 +353,7 @@ export async function GET(request: NextRequest) {
         movementsOut: monthMovementsOut,
       },
       salary: {
-        total: totalSalary,
+        total: paidSalaries,
         reportsCount: eotReports.length,
       },
       incomeByProject,

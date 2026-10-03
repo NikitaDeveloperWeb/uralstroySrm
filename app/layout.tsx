@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import { NavMenu } from '@/shared/components/navigation/NavMenu';
+import { NavMenuWrapper } from '@/shared/components/navigation/NavMenuWrapper';
 import { NotificationProvider } from '@/shared/contexts/NotificationContext';
 import { NotificationOverlay } from '@/shared/components/navigation/NotificationOverlay';
 import { ToastProvider } from '@/shared/components/ui/Toast';
@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <LayoutWrapper>
               <ToastProvider>
               <AlertProvider />
-              <NavMenu />
+              <NavMenuWrapper />
               <NotificationOverlay />
               <main className="flex-1 min-h-screen pb-25">
                 <div className="w-full px-6 py-10 min-h-screen pb-25">{children}</div>

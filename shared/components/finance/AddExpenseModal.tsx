@@ -52,7 +52,7 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
   const [showEquipment, setShowEquipment] = useState(false);
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([]);
   const [suppliers, setSuppliers] = useState<{ id: number; companyName: string }[]>([]);
-  const [selectedSupplier, setSelectedSupplier] = useState('');
+  const [selectedSupplierId, setSelectedSupplierId] = useState<number | ''>('');
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState('');
   const [expenseStage, setExpenseStage] = useState('');
@@ -100,7 +100,7 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
         .then(data => {
           const items = (data as any).data || data;
           if (Array.isArray(items)) {
-            setSuppliers(items.filter((s: any) => s.status === 'active'));
+            setSuppliers(items.filter((s: any) => !s.status || s.status === 'active'));
           }
         })
         .catch(err => {
@@ -156,7 +156,7 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
       setPurpose('');
       setCategory('');
       setSelectedEquipment('');
-      setSelectedSupplier('');
+      setSelectedSupplierId('');
       setSelectedProject('');
       setExpenseStage('');
       setError('');
@@ -186,7 +186,7 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
       ? `${purpose} — ${selectedEquipment}`
       : purpose;
 
-    const supplier = suppliers.find(s => s.companyName === selectedSupplier);
+    const supplier = suppliers.find(s => s.id === selectedSupplierId);
     const project = projects.find(p => p.name === selectedProject);
 
     onSubmit({
@@ -324,13 +324,13 @@ export function AddExpenseModal({ isOpen, onClose, onSubmit }: AddExpenseModalPr
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1.5">Поставщик (опционально)</label>
               <select
-                value={selectedSupplier}
-                onChange={(e) => setSelectedSupplier(e.target.value)}
+                value={selectedSupplierId}
+                onChange={(e) => setSelectedSupplierId(e.target.value ? Number(e.target.value) : '')}
                 className="w-full rounded-lg border border-gray-300 dark:border-slate-600 px-3 py-2.5 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
               >
                 <option value="">Не выбран</option>
                 {suppliers.map((supplier) => (
-                  <option key={supplier.id} value={supplier.companyName}>
+                  <option key={supplier.id} value={supplier.id}>
                     {supplier.companyName}
                   </option>
                 ))}

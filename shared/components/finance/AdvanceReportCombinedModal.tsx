@@ -5,7 +5,7 @@ import { useAlert } from '@/shared/hooks/useAlert';
 import { Modal } from '@/shared/components/ui/Modal';
 import { Employee } from '@/shared/types/project';
 import { useEmployeeStore } from '@/shared/stores/employeeStore';
-import { UserCheck, DollarSign, Loader2, Plus, History, Trash2 } from 'lucide-react';
+import { UserCheck, DollarSign, Loader2, Plus, History, Trash2, Pencil } from 'lucide-react';
 
 interface AdvanceEntry {
   employeeId: number;
@@ -34,6 +34,9 @@ interface AdvanceReportCombinedModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: { date: string; entries: AdvanceEntry[] }) => void;
+  onUpdate: (id: number, data: { date: string; entries: AdvanceEntry[] }) => void;
+  onEdit: (id: number) => void;
+  editingReportId: number | null;
   reports: AdvanceReport[];
   onDelete: (id: number) => Promise<void>;
 }
@@ -45,6 +48,7 @@ interface EmployeeAdvances {
   employeeName: string;
   advances: AdvanceReportItem[];
   total: number;
+  reportId: number;
 }
 
 interface MonthGroup {
@@ -58,6 +62,9 @@ export function AdvanceReportCombinedModal({
   isOpen,
   onClose,
   onSubmit,
+  onUpdate,
+  onEdit,
+  editingReportId: editingReportIdProp,
   reports,
   onDelete,
 }: AdvanceReportCombinedModalProps) {
@@ -68,19 +75,37 @@ export function AdvanceReportCombinedModal({
   const [entries, setEntries] = useState<AdvanceEntry[]>([]);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
+
   const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(new Set());
   const [collapsedEmployees, setCollapsedEmployees] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (isOpen) {
       fetchEmployees();
-      setDate(new Date().toISOString().split('T')[0]);
-      setEntries([]);
-      setActiveTab('create');
       setCollapsedMonths(new Set());
       setCollapsedEmployees(new Set());
+
+      if (editingReportIdProp) {
+        // Load report data for editing
+        const report = reports.find(r => r.id === editingReportIdProp);
+        if (report) {
+          setDate(report.date.split('T')[0]);
+          setEntries(report.items.map(item => ({
+            employeeId: item.employeeId,
+            employeeName: item.employeeName,
+            amount: String(item.amount),
+            purpose: item.purpose || '',
+          })));
+          setActiveTab('create');
+        }
+      } else {
+        setDate(new Date().toISOString().split('T')[0]);
+        setEntries([]);
+        setActiveTab('create');
+      }
     }
-  }, [isOpen, fetchEmployees]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, editingReportIdProp]);
 
   const toggleEmployee = (employee: Employee) => {
     setEntries(prev => {
@@ -112,13 +137,21 @@ export function AdvanceReportCombinedModal({
     if (validEntries.length === 0) return;
     setSaving(true);
     try {
-      await onSubmit({ date, entries: validEntries });
+      if (editingReportIdProp) {
+        await onUpdate(editingReportIdProp, { date, entries: validEntries });
+      } else {
+        await onSubmit({ date, entries: validEntries });
+      }
       onClose();
     } catch (error) {
       console.error('Error:', error);
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEdit = async (id: number) => {
+    onEdit(id);
   };
 
   const handleDelete = async (id: number) => {
@@ -194,12 +227,14 @@ export function AdvanceReportCombinedModal({
             employeeName: item.employeeName,
             advances: [],
             total: 0,
+            reportId: report.id,
           });
         }
 
         const group = monthsMap.get(monthKey)!;
         group.advances.push({ ...item, date: report.date });
         group.total += item.amount;
+        group.reportId = report.id;
       }
     }
 
@@ -269,6 +304,11 @@ export function AdvanceReportCombinedModal({
           <>
             {/* Date */}
             <div className="flex-shrink-0 pb-4 border-b">
+              {editingReportIdProp && (
+                <div className="mb-2 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                  ✏️ Редактирование отчёта
+                </div>
+              )}
               <input
                 type="date"
                 value={date}
@@ -361,7 +401,7 @@ export function AdvanceReportCombinedModal({
                 disabled={saving || entries.length === 0}
                 className="px-6 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50"
               >
-                {saving ? 'Сохранение...' : 'Сохранить'}
+                {saving ? 'Сохранение...' : editingReportIdProp ? 'Сохранить изменения' : 'Сохранить'}
               </button>
             </div>
           </>
@@ -472,21 +512,33 @@ export function AdvanceReportCombinedModal({
                                             <span className="text-sm font-semibold text-gray-900 dark:text-white">
                                               {advance.amount.toLocaleString('ru-RU')} ₽
                                             </span>
-                                            <button
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDelete(advance.id);
-                                              }}
-                                              disabled={deleting === advance.id}
-                                              className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
-                                              title="Удалить отчет"
-                                            >
-                                              {deleting === advance.id ? (
-                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                              ) : (
-                                                <Trash2 className="w-4 h-4" />
-                                              )}
-                                            </button>
+                                            <div className="flex items-center gap-1">
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleEdit(emp.reportId);
+                                                }}
+                                                className="p-1 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                title="Редактировать отчет"
+                                              >
+                                                <Pencil className="w-4 h-4" />
+                                              </button>
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleDelete(emp.reportId);
+                                                }}
+                                                disabled={deleting === emp.reportId}
+                                                className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                                                title="Удалить отчет"
+                                              >
+                                                {deleting === emp.reportId ? (
+                                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                                ) : (
+                                                  <Trash2 className="w-4 h-4" />
+                                                )}
+                                              </button>
+                                            </div>
                                           </div>
                                         </div>
                                       ))}

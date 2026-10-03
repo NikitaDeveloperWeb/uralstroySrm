@@ -132,8 +132,8 @@ export function MonthlyReportModal({ isOpen, onClose }: { isOpen: boolean; onClo
       ['ФИНАНСЫ'],
       ['Общие доходы', report.finances.totalIncome],
       ['Расходы (материалы, бензин, прочее)', report.finances.totalExpenses],
-      ['Зарплаты (ЕОТ)', report.salary.total],
-      ['Прибыль (доходы - расходы - зарплаты)', report.finances.profit],
+      ['Зарплаты (выплаченные)', report.salary.total],
+      ['Прибыль (доходы - расходы - выплаченные зарплаты)', report.finances.profit],
       ['Рентабельность %', report.finances.profitMargin.toFixed(1) + '%'],
       [],
       ['ПОСТАВЩИКИ'],
@@ -501,8 +501,9 @@ export function MonthlyReportModal({ isOpen, onClose }: { isOpen: boolean; onClo
                     <p className="text-3xl font-bold text-purple-700 dark:text-purple-300">{report.salary.reportsCount}</p>
                   </div>
                   <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4">
-                    <p className="text-sm text-indigo-600 dark:text-indigo-400 mb-1">Выплачено всего</p>
+                    <p className="text-sm text-indigo-600 dark:text-indigo-400 mb-1">Выплачено (к выплате)</p>
                     <p className="text-3xl font-bold text-indigo-700 dark:text-indigo-300">{formatCurrency(report.salary.total)}</p>
+                    <p className="text-xs text-indigo-400 mt-1">Учитывается в расходах только после выплаты</p>
                   </div>
                 </div>
               </div>

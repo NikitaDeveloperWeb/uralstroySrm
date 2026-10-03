@@ -114,7 +114,7 @@ export default function FinancePage() {
   const [expenseCategoriesPage, setExpenseCategoriesPage] = useState(1);
   const expenseCategoriesPerPage = 12;
   
-  const { expenses, advanceReports, salaryReports, fetchExpenses, addExpense, addAdvanceReport, addSalaryReport, fetchAdvanceReports, fetchSalaryReports } = useFinanceStore();
+  const { expenses, advanceReports, salaryReports, fetchExpenses, addExpense, addAdvanceReport, addSalaryReport, fetchAdvanceReports, fetchSalaryReports, updateAdvanceReport } = useFinanceStore();
   const { funds, fetchFunds, createFund, updateFund, deleteFund, createTransaction } = useFundStore();
   const [showExpenseReport, setShowExpenseReport] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
@@ -127,6 +127,7 @@ export default function FinancePage() {
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [showEOTView, setShowEOTView] = useState(false);
   const [showEmployeeAdvance, setShowEmployeeAdvance] = useState(false);
+  const [editingReportId, setEditingReportId] = useState<number | null>(null);
   const [todayIncome, setTodayIncome] = useState(0);
   const [projects, setProjects] = useState<Project[]>([]);
 
@@ -357,11 +358,36 @@ export default function FinancePage() {
 
   const handleDeleteAdvanceReport = async (id: number) => {
     try {
-      await fetch(`/api/advance-reports/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/advance-reports/${id}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (res.status === 404) {
+        // Report already deleted, remove from local state
+        await fetchAdvanceReports();
+        return;
+      }
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || 'Ошибка при удалении');
+        return;
+      }
       await fetchAdvanceReports();
     } catch (error) {
       console.error('Error deleting advance report:', error);
     }
+  };
+
+  const handleUpdateAdvanceReport = async (id: number, data: { date: string; entries: Array<{ employeeId: number; employeeName: string; amount: string; purpose: string }> }) => {
+    await updateAdvanceReport(id, {
+      date: data.date,
+      entries: data.entries.map(e => ({
+        employeeId: e.employeeId,
+        employeeName: e.employeeName,
+        amount: parseFloat(e.amount),
+        purpose: e.purpose,
+      })),
+    });
   };
 
   const handleFundOperation = async (data: {
@@ -499,8 +525,14 @@ export default function FinancePage() {
       {/* Modals */}
       <AdvanceReportCombinedModal
         isOpen={showAdvanceCombined}
-        onClose={() => setShowAdvanceCombined(false)}
+        onClose={() => { setShowAdvanceCombined(false); setEditingReportId(null); }}
         onSubmit={handleAdvanceReportSubmit}
+        onUpdate={handleUpdateAdvanceReport}
+        onEdit={(id) => {
+          setEditingReportId(id);
+          setShowAdvanceCombined(true);
+        }}
+        editingReportId={editingReportId}
         reports={advanceReports}
         onDelete={handleDeleteAdvanceReport}
       />
@@ -605,8 +637,13 @@ export default function FinancePage() {
                 (() => {
                   const monthsMap = new Map();
                   paginatedEOTReports.forEach(report => {
+                    // Use UTC to avoid timezone issues
                     const date = new Date(report.date);
-                    const monthKey = date.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
+                    const monthKey = date.toLocaleDateString('ru-RU', { 
+                      month: 'long', 
+                      year: 'numeric',
+                      timeZone: 'UTC'
+                    });
                     if (!monthsMap.has(monthKey)) monthsMap.set(monthKey, []);
                     monthsMap.get(monthKey).push(report);
                   });

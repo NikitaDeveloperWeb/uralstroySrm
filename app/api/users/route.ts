@@ -3,10 +3,17 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcrypt';
 import { successResponse, errorResponse, handlePrismaError } from '@/shared/lib/api-response';
 import { createUserSchema } from '@/shared/lib/validators';
+import { getAuthUser } from '@/shared/lib/auth';
+import { UserRole } from '@prisma/client';
 
 // GET /api/users - получить список пользователей
 export async function GET() {
   try {
+    const user = await getAuthUser();
+    if (!user || user.role !== UserRole.ADMIN) {
+      return errorResponse('Доступ запрещен. Требуется роль администратора.', 403);
+    }
+
     const users = await prisma.user.findMany({
       orderBy: { createdAt: 'desc' },
     });
@@ -21,19 +28,24 @@ export async function GET() {
 // POST /api/users - создать пользователя
 export async function POST(request: NextRequest) {
   try {
+    const user = await getAuthUser();
+    if (!user || user.role !== UserRole.ADMIN) {
+      return errorResponse('Доступ запрещен. Требуется роль администратора.', 403);
+    }
+
     const body = await request.json();
     const validated = createUserSchema.parse(body);
 
     const hashedPassword = await bcrypt.hash(validated.password, 10);
 
-    const user = await prisma.user.create({
+    const newUser = await prisma.user.create({
       data: {
         ...validated,
         password: hashedPassword,
       },
     });
 
-    return successResponse(user, 201);
+    return successResponse(newUser, 201);
   } catch (error) {
     console.error('POST /api/users error:', error);
     return handlePrismaError(error);

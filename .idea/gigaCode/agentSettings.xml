@@ -928,6 +928,249 @@
         <Execute>
           <option name="pattern" value="timeout /t 3 /nobreak &gt;nul" />
         </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force E:/Uralstroy/my-app/.next" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="taskkill /PID 3200 /F" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="taskkill /PID 3616 /F" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -ExecutionPolicy Bypass -File E:/Uralstroy/my-app/add-templates.ps1" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item E:/Uralstroy/my-app/templates-data.json, E:/Uralstroy/my-app/add-templates.ps1" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -ExecutionPolicy Bypass -File E:/Uralstroy/my-app/add-materials-full.ps1" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item E:/Uralstroy/my-app/materials-full.json, E:/Uralstroy/my-app/add-materials-full.ps1" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;Invoke-RestMethod -Uri 'http://localhost:3000/api/warehouse-items?page=1&amp;limit=1000' | ConvertTo-Json -Depth 3&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;(Invoke-RestMethod 'http://localhost:3000/api/warehouse-items?page=1&amp;limit=10').data.items.Count&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node check-db.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node fix-statuses.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node check-works.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item E:/Uralstroy/my-app/add-works.js, E:/Uralstroy/my-app/check-works.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="head *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Pattern &quot;Compiled|error|Error&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;try { require('xlsx'); console.log('xlsx available'); } catch(e) { console.log('xlsx NOT available:', e.message); }&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.unitRate.count().then(c =&gt; console.log('UnitRates count:', c)).catch(e =&gt; console.error('Error:', e.message)).finally(() =&gt; process.exit(0));&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Out-String -Width 500" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.unitRate.findMany({ where: { isActive: true }, orderBy: { category: 'asc', name: 'asc' }, take: 5 }).then(r =&gt; { console.log(JSON.stringify(r, null, 2)); }).catch(e =&gt; console.error('Error:', e.message)).finally(() =&gt; process.exit(0));&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.unitRate.findMany({ where: { isActive: true }, orderBy: [{ category: 'asc' }, { name: 'asc' }], take: 5 }).then(r =&gt; { console.log('Success! Count:', r.length); console.log(JSON.stringify(r[0], null, 2)); }).catch(e =&gt; console.error('Error:', e.message)).finally(() =&gt; process.exit(0));&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N &quot;EmployeeAdvance&quot; E:\Uralstroy\my-app\prisma\schema.prisma" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Pattern &quot;Compiled|Type error&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Pattern &quot;settledAmount|line&quot; -Context 2,2" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Pattern &quot;Compiled|error|Error|Failed&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N /C:&quot;model Expense&quot; E:\Uralstroy\my-app\prisma\schema.prisma" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N /C:&quot;model Supplier&quot; E:\Uralstroy\my-app\prisma\schema.prisma" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N \&quot;supplier-settlements\&quot; E:\Uralstroy\my-app\app\supplier-settlements\page.tsx" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="powershell -Command &quot;(Get-Content 'E:\Uralstroy\my-app\app\supplier-settlements\page.tsx' | Measure-Object -Line).Lines&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Pattern &quot;error|Error&quot; -Context 3,3" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Out-Null" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N &quot;contractors&quot; E:\Uralstroy\my-app\app\supplier-settlements\page.tsx" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.supplier.findMany({ select: { id: true, companyName: true, category: true, contactPerson: true, phone: true, _count: { select: { expenses: true, movements: true } } }, take: 20 }).then(r =&gt; { console.log(JSON.stringify(r, null, 2)); }).catch(e =&gt; console.error('Error:', e.message)).finally(() =&gt; process.exit(0));&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force E:\Uralstroy\my-app\app\api\contractor-contracts -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force E:\Uralstroy\my-app\app\api\contractor-contracts" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force E:\Uralstroy\my-app\app\api\contractors" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Force E:\Uralstroy\my-app\import-contractors.js -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Pattern &quot;error|Error&quot; -Context 2,2" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Pattern &quot;page.tsx.*:&quot; -Context 1,1" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Pattern &quot;Expression|Unexpected|Expected&quot; -Context 2,2" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N &quot;contract.totalAmount&quot; E:\Uralstroy\my-app\app\supplier-settlements\page.tsx" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N &quot;contractorDetail&quot; E:\Uralstroy\my-app\app\supplier-settlements\page.tsx" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Select-String -Pattern &quot;1473|1474|1475&quot; -Context 2,2" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="findstr /N &quot;h1&quot; E:\Uralstroy\my-app\app\supplier-settlements\page.tsx" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="ConvertTo-Json -Depth 10" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;const {PrismaClient} = require('@prisma/client'); const p = new PrismaClient(); p.$connect().then(() =&gt; { p.employee.findMany({where:{fullName:{contains:'Фаткул'}}, include:{eotReports:{include:{items:true}}}}).then(d =&gt; console.log(JSON.stringify(d, null, 2))).finally(() =&gt; p.$disconnect()); });&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="sqlite3 prisma\dev.db &quot;SELECT id, fullName, paymentType, monthlySalary, hourlyRateId FROM employees WHERE fullName LIKE '%Фаткул%';&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="python check-fatkulkin.py" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="python check-fatkulkin.py &gt; check-fatkulkin-output.txt 2&gt;&amp;1" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="python check-fatkulkin.py 2&gt;&amp;1" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="python3 check-fatkulkin.py" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="python3 -c &quot;open('test.txt','w').write('hello')&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="where *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="dir node_modules\.prisma\client 2&gt;$null" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node check-fatkulkin.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node -e &quot;console.log(require('fs').readFileSync('prisma/schema.prisma','utf8').split('\n').filter(l =&gt; l.includes('eot_report_items') || l.includes('employee_name') || l.includes('reportId') || l.includes('report_id')).slice(0,30))&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node test-fix.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="curl -X POST http://localhost:3000/api/salary-reports/generate -H &quot;Content-Type: application/json&quot; -d &quot;{\&quot;month\&quot;:9,\&quot;year\&quot;:2026}&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="$body = '{&quot;month&quot;:9,&quot;year&quot;:2026}'" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item check-fatkulkin.js, check-fatkulkin.py, check-fatkulkin-output.txt, test-fix.js -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node check-rusakov.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item check-rusakov.js -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node check-all-salary.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node fix-salary.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item fix-salary.js, check-all-salary.js -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="pwd" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Move-Item -Path middleware.ts -Destination proxy.ts -Force" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Copy-Item -Path &quot;E:/Uralstroy/my-app/prisma/backups/backup_2026-10-02T06-01-01.db&quot; -Destination &quot;E:/Uralstroy/my-app/prisma/dev.db&quot; -Force" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force node_modules/.prisma -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Copy-Item .env.local .env" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force node_modules/@prisma -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="$env:PRISMA_QUERY_ENGINE_LIBRARY = &quot;$PWD\node_modules\.prisma\client\query_engine.dll&quot;" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="node node_modules/@prisma/engines/install.js" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-ChildItem -Recurse -Filter &quot;*.tmp*&quot; -Path node_modules/.prisma 2&gt;$null" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Rename-Item -Path &quot;node_modules\.prisma\client\query_engine-windows.dll.node.tmp31648&quot; -NewName &quot;query_engine-windows.dll.node&quot; -Force" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Get-ChildItem -Force node_modules\.prisma\client" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force node_modules\@prisma -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="$env:DATABASE_URL=postgresql://postgres.saytbkcrkoiinfdoopvt:XEE-uQZ-JHs-Fmg@aws-0-eu-west-2.pooler.supabase.com:5432/postgres" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="vercel login *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="vercel" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="vercel deploy *" />
+        </Execute>
       </list>
     </option>
     <option name="autoApprovedReads">
@@ -1039,6 +1282,27 @@
         </Read>
         <Read>
           <option name="pattern" value="C:/Users/SergioRazor/Desktop/helpers/app/projects/[id]/estimate/WorksTab.tsx" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/c/Users/sly12/Desktop/urscim/package.json" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/c/Users/sly12/Desktop/urscim/app/*" />
+        </Read>
+        <Read>
+          <option name="pattern" value="C:/Users/sly12/Desktop/urscim/app/*" />
+        </Read>
+        <Read>
+          <option name="pattern" value="C:/Users/sly12/Desktop/urscim/prisma/schema.prisma" />
+        </Read>
+        <Read>
+          <option name="pattern" value="C:/Users/sly12/Desktop/urscim/*" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/path/to/project/*" />
+        </Read>
+        <Read>
+          <option name="pattern" value="/app/*" />
         </Read>
       </list>
     </option>

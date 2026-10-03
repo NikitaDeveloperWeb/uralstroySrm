@@ -26,9 +26,14 @@ export async function GET() {
     });
 
     projects.sort((a, b) => {
+      // Сначала сортируем по типу
       const typeA = typeOrder[a.type] ?? 99;
       const typeB = typeOrder[b.type] ?? 99;
-      return typeA - typeB;
+      if (typeA !== typeB) return typeA - typeB;
+      // Внутри типа — по дедлайну (сначала ближайшие)
+      const dateA = a.deadline ? new Date(a.deadline).getTime() : Infinity;
+      const dateB = b.deadline ? new Date(b.deadline).getTime() : Infinity;
+      return dateA - dateB;
     });
 
     const now = new Date();

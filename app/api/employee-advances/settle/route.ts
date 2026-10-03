@@ -6,7 +6,7 @@ import { successResponse, errorResponse } from '@/shared/lib/api-response';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { advanceId, amount, purpose, category, date } = body;
+    const { advanceId, amount, purpose, category, date, supplierId, projectId } = body;
 
     if (!advanceId || !amount || !purpose) {
       return errorResponse('Укажите подотчет, сумму и цель расхода', 400);
@@ -37,6 +37,8 @@ export async function POST(request: NextRequest) {
           purpose: purpose,
           category: category || 'Подотчет',
           recipient: advance.employeeName,
+          supplierId: supplierId || null,
+          projectId: projectId || null,
         }
       });
 

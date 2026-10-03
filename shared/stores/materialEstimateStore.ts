@@ -390,7 +390,7 @@ export const useMaterialEstimateStore = create<MaterialEstimateStore>((set, get)
   fetchMaterials: async () => {
     set({ loading: true, error: null });
     try {
-      const { data } = await apiFetch<ApiResponse<Material[]>>('/api/warehouse');
+      const { data } = await apiFetch<ApiResponse<Material[]>>('/api/warehouse-items');
       set({ materials: data ?? [], loading: false, error: null });
     } catch (e: unknown) {
       set({ error: (e as Error).message, loading: false });

@@ -76,7 +76,17 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
   const loadNotifications = useCallback(async () => {
     try {
-      const res = await fetch('/api/notifications');
+      const res = await fetch('/api/notifications', { credentials: 'include' });
+      
+      if (!res.ok && res.status === 401) {
+        // Not authenticated, clear notifications
+        setState(prev => ({
+          ...prev,
+          notifications: [],
+          unreadCount: 0,
+        }));
+        return;
+      }
       
       // Handle non-JSON responses (e.g., HTML error pages)
       const contentType = res.headers.get('content-type');

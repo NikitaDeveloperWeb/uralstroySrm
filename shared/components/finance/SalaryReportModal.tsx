@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { useAlert } from '@/shared/hooks/useAlert';
 import { Modal } from '@/shared/components/ui/Modal';
-import { Calendar, Loader2, FileText, User, DollarSign, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, Loader2, FileText, User, DollarSign, CheckCircle, ChevronDown, ChevronUp, RefreshCw, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface SalaryReportItem {
   id: number;
@@ -46,6 +47,7 @@ export function SalaryReportModal({ isOpen, onClose, onRefresh, reports }: Salar
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
   const [generating, setGenerating] = useState(false);
+  const [updating, setUpdating] = useState<string | null>(null);
 
   const toggleReport = (reportId: number) => {
     setExpandedReports(prev => {
@@ -96,6 +98,161 @@ export function SalaryReportModal({ isOpen, onClose, onRefresh, reports }: Salar
       alert(error.message || 'Ошибка при генерации зарплатного отчета');
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleUpdate = async (period: string) => {
+    if (!(await confirm('Пересчитать зарплату за ' + period + '?'))) return;
+    
+    setUpdating(period);
+    try {
+      const res = await fetch('/api/salary-reports/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ period, regenerate: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка');
+      await onRefresh();
+      alert('Зарплатный отчет пересчитан');
+    } catch (error: any) {
+      alert(error.message || 'Ошибка при обновлении');
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  const handleExportExcel = async (report: SalaryReport) => {
+    try {
+      // Fetch hourly rates
+      const ratesRes = await fetch('/api/hourly-rates');
+      const ratesData = await ratesRes.json();
+      const hourlyRates: Record<string, number> = {};
+      
+      if (ratesData.success && ratesData.data) {
+        for (const rate of ratesData.data) {
+          hourlyRates[rate.position] = rate.rate;
+        }
+      }
+
+      // Fetch employees to get their hourly rates
+      const empRes = await fetch('/api/employees');
+      const empData = await empRes.json();
+      const employeeRates: Record<number, number> = {};
+      
+      if (empData.success && empData.data) {
+        for (const emp of empData.data) {
+          if (emp.hourlyRate) {
+            employeeRates[emp.id] = emp.hourlyRate.rate;
+          }
+        }
+      }
+
+      // Build Excel data
+      const rows: string[][] = [
+        ['Зарплатный отчет'],
+        ['Период: ' + report.period],
+        ['Дата формирования: ' + formatDate(report.date)],
+        [],
+        ['ФИО', 'Часовая ставка', 'Кол-во часов', 'Кол-во смен', 'Общая ЗП', 'Авансы', 'Штрафы', 'Премии', 'Остаток к выдаче'],
+      ];
+
+      let totalGross = 0;
+      let totalAdvances = 0;
+      let totalPenalties = 0;
+      let totalBonuses = 0;
+      let totalNet = 0;
+
+      for (const item of report.items) {
+        const hourlyRate = employeeRates[item.employeeId] || 0;
+        const gross = item.grossSalary || 0;
+        const advances = item.advances || 0;
+        const penalties = item.penalties || 0;
+        const bonuses = item.bonuses || 0;
+        const net = item.amount;
+
+        totalGross += gross;
+        totalAdvances += advances;
+        totalPenalties += penalties;
+        totalBonuses += bonuses;
+        totalNet += net;
+
+        rows.push([
+          item.employeeName,
+          hourlyRate > 0 ? hourlyRate + ' ₽/ч' : '—',
+          String(item.hours || 0),
+          String(item.shifts || 0),
+          gross.toLocaleString('ru-RU'),
+          advances > 0 ? '-' + advances.toLocaleString('ru-RU') : '0',
+          penalties > 0 ? '-' + penalties.toLocaleString('ru-RU') : '0',
+          bonuses > 0 ? '+' + bonuses.toLocaleString('ru-RU') : '0',
+          net.toLocaleString('ru-RU'),
+        ]);
+      }
+
+      // Add totals row
+      rows.push([]);
+      rows.push([
+        'ИТОГО',
+        '',
+        '',
+        '',
+        totalGross.toLocaleString('ru-RU'),
+        '-' + totalAdvances.toLocaleString('ru-RU'),
+        '-' + totalPenalties.toLocaleString('ru-RU'),
+        totalBonuses > 0 ? '+' + totalBonuses.toLocaleString('ru-RU') : '0',
+        totalNet.toLocaleString('ru-RU'),
+      ]);
+
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 40 }, // ФИО
+        { wch: 15 }, // Часовая ставка
+        { wch: 14 }, // Кол-во часов
+        { wch: 14 }, // Кол-во смен
+        { wch: 14 }, // Общая ЗП
+        { wch: 14 }, // Авансы
+        { wch: 14 }, // Штрафы
+        { wch: 14 }, // Премии
+        { wch: 18 }, // Остаток к выдаче
+      ];
+
+      // Add borders and styling
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+      const borderStyle = { style: 'thin', color: { rgb: '000000' } };
+      
+      for (let R = range.s.r; R <= range.e.r; R++) {
+        for (let C = range.s.c; C <= range.e.c; C++) {
+          const addr = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[addr]) continue;
+          if (!ws[addr].s) ws[addr].s = {};
+          ws[addr].s.border = borderStyle;
+          
+          // Header styling
+          if (R === 0) {
+            ws[addr].s.font = { bold: true, sz: 14 };
+          }
+          // Column headers
+          if (R === 4) {
+            ws[addr].s.font = { bold: true };
+            ws[addr].s.fill = { fgColor: { rgb: 'E8E8E8' } };
+          }
+          // Totals row
+          if (R === rows.length - 1) {
+            ws[addr].s.font = { bold: true };
+          }
+        }
+      }
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Зарплатный отчет');
+      XLSX.writeFile(wb, 'zarplata_' + report.period + '_' + new Date().toISOString().split('T')[0] + '.xlsx');
+    } catch (error: any) {
+      console.error('Export error:', error);
+      alert('Ошибка при экспорте: ' + (error.message || 'неизвестная ошибка'));
     }
   };
 
@@ -160,9 +317,10 @@ export function SalaryReportModal({ isOpen, onClose, onRefresh, reports }: Salar
             <FileText className="w-5 h-5 text-purple-600 mb-2" />
             <h3 className="font-semibold text-purple-900 mb-1">Как рассчитывается ЗП?</h3>
             <ul className="text-sm text-purple-800 space-y-1">
-              <li>• Суммируются все начисления из ЕОТ за месяц</li>
-              <li>• Вычитаются все выданные авансы</li>
-              <li>• Показывается итог к выплате</li>
+              <li>• Сменная: часы из расписания × ставка</li>
+              <li>• Оклад: не выше monthlySalary</li>
+              <li>• Вычитаются авансы, добавляются премии/штрафы</li>
+              <li>• Кнопка 🔄 для пересчета отчета</li>
             </ul>
           </div>
         </div>
@@ -204,6 +362,31 @@ export function SalaryReportModal({ isOpen, onClose, onRefresh, reports }: Salar
                           <span className="font-bold text-gray-900 dark:text-white">
                             {report.totalAmount.toLocaleString('ru-RU')} ₽
                           </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleExportExcel(report);
+                            }}
+                            className="p-2 text-green-600 hover:bg-green-50 dark:hover:bg-green-900 rounded-lg transition-colors"
+                            title="Экспорт в Excel"
+                          >
+                            <Download className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleUpdate(report.period);
+                            }}
+                            disabled={updating === report.period}
+                            className="p-2 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900 rounded-lg transition-colors disabled:opacity-50"
+                            title="Пересчитать зарплату"
+                          >
+                            {updating === report.period ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-4 h-4" />
+                            )}
+                          </button>
                           {isExpanded ? <ChevronUp className="w-4 h-4 text-gray-400 dark:text-slate-500" /> : <ChevronDown className="w-4 h-4 text-gray-400 dark:text-slate-500" />}
                         </div>
                       </div>

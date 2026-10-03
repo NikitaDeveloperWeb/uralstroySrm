@@ -30,6 +30,7 @@ export function TransactionTable({
   const [editingTransaction, setEditingTransaction] = useState<ProjectTransaction | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { confirm } = useAlert();
 
   const totalTransactions = transactions.reduce((sum, t) => sum + t.amount, 0);
   const remaining = projectCost - totalTransactions;
@@ -46,7 +47,6 @@ export function TransactionTable({
   };
 
   const handleDelete = async (id: number) => {
-    const { confirm } = useAlert();
     if (!(await confirm('Удалить транзакцию?'))) return;
     
     setDeletingId(id);

@@ -368,7 +368,7 @@ export const createUserSchema = z.object({
   email: z.string().email('Некорректный email'),
   password: z.string().min(6, 'Пароль минимум 6 символов'),
   name: z.string().optional().nullable(),
-  role: z.enum(['admin', 'manager', 'worker']).default('admin'),
+  role: z.enum(['ADMIN', 'MANAGER']).default('ADMIN'),
 });
 
 export const updateUserSchema = createUserSchema.partial();

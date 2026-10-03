@@ -36,12 +36,30 @@ export const useMaterialStore = create<MaterialStore>((set) => ({
       if (status) params.append('status', status);
 
       const { data } = await apiFetch<ApiResponse<{ items: Material[]; pagination: PaginationInfo }>>(
-        `/api/warehouse?${params.toString()}`
+        `/api/warehouse-items?${params.toString()}`
       );
-      set({
-        materials: data?.items || [],
-        isLoading: false,
-      });
+      const items = data?.items || [];
+      // Если загружаем много (>100), сохраняем все как есть
+      // Иначе это пагинация, заменяем только текущую страницу
+      if (limit >= 1000) {
+        set({ materials: items, isLoading: false });
+      } else {
+        set((state) => {
+          const existing = state.materials || [];
+          const existingIds = new Set(existing.map(m => m.id));
+          // Добавляем новые, обновляем существующие
+          const merged = [...existing];
+          for (const item of items) {
+            if (existingIds.has(item.id)) {
+              const idx = merged.findIndex(m => m.id === item.id);
+              if (idx !== -1) merged[idx] = item;
+            } else {
+              merged.push(item);
+            }
+          }
+          return { materials: merged, isLoading: false };
+        });
+      }
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Ошибка загрузки', isLoading: false });
     }
@@ -49,7 +67,7 @@ export const useMaterialStore = create<MaterialStore>((set) => ({
 
   createMaterial: async (data) => {
     try {
-      const { data: item } = await apiFetch<ApiResponse<Material>>('/api/warehouse', {
+      const { data: item } = await apiFetch<ApiResponse<Material>>('/api/warehouse-items', {
         method: 'POST',
         body: JSON.stringify(data),
       });
@@ -64,7 +82,7 @@ export const useMaterialStore = create<MaterialStore>((set) => ({
 
   updateMaterial: async (id, data) => {
     try {
-      const { data: item } = await apiFetch<ApiResponse<Material>>(`/api/warehouse/${id}`, {
+      const { data: item } = await apiFetch<ApiResponse<Material>>(`/api/warehouse-items/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       });
@@ -81,7 +99,7 @@ export const useMaterialStore = create<MaterialStore>((set) => ({
 
   deleteMaterial: async (id) => {
     try {
-      await apiFetch(`/api/warehouse/${id}`, { method: 'DELETE' });
+      await apiFetch(`/api/warehouse-items/${id}`, { method: 'DELETE' });
       set((state) => ({
         materials: state.materials.filter((m) => m.id !== id),
       }));

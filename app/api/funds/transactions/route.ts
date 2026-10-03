@@ -67,38 +67,9 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Если пополнение фонда — автоматически создаём Expense
-      if (validated.type === 'income') {
-        await tx.expense.create({
-          data: {
-            date: validated.date,
-            amount: validated.amount,
-            recipient: fund.name,
-            purpose: `Пополнение фонда: ${fund.name}`,
-            category: 'Пополнение фонда',
-          },
-        });
-      }
 
-      // Если вывод из фонда — автоматически создаём ProjectTransaction (Приход)
-      if (validated.type === 'expense') {
-        // Получим первый проект для привязки
-        const firstProject = await tx.project.findFirst({
-          orderBy: { id: 'asc' },
-          select: { id: true }
-        });
 
-        if (firstProject) {
-          await tx.projectTransaction.create({
-            data: {
-              projectId: firstProject.id,
-              amount: validated.amount,
-              date: validated.date,
-              comment: `Вывод из фонда: ${fund.name} — ${validated.description || ''}`,
-            },
-          });
-        }
-      }
+
 
       return t;
     });

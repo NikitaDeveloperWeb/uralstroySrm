@@ -1,11 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get('redirect') || '/dashboard';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -32,7 +34,7 @@ export default function LoginPage() {
         return;
       }
 
-      router.push('/dashboard');
+      router.push(redirectPath);
     } catch {
       setError('Ошибка подключения');
     } finally {
@@ -42,7 +44,6 @@ export default function LoginPage() {
 
   return (
     <div className="space-y-8">
-      {/* Логотип и заголовок */}
       <div className="text-center space-y-4">
         <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-2xl shadow-lg shadow-blue-600/30">
           <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -55,9 +56,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Форма */}
       <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Email */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">Email</label>
           <div className="relative">
@@ -76,7 +75,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Пароль */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">Пароль</label>
           <div className="relative">
@@ -105,14 +103,12 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Ошибка */}
         {error && (
           <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
 
-        {/* Кнопка входа */}
         <button
           type="submit"
           disabled={loading}
@@ -132,12 +128,17 @@ export default function LoginPage() {
         </button>
       </form>
 
-      {/* Подвал */}
       <div className="text-center pt-4 border-t border-gray-200">
-        <p className="text-sm text-gray-500">
-          © 2026 УралСтрой CRM
-        </p>
+        <p className="text-sm text-gray-500">© 2026 УралСтрой CRM</p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-10">Загрузка...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Pencil, Trash2, Search, Plus } from 'lucide-react';
+import { Pencil, Trash2, Search, Plus, FileText } from 'lucide-react';
 import { Modal } from '@/shared/components/ui/Modal';
 import { Pagination } from '@/shared/components/ui/Pagination';
 import { useUnitRateStore } from '@/shared/stores/unitRateStore';
@@ -29,6 +29,7 @@ export default function WorkTypesPage() {
     isActive: true,
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
   const nameRef = useRef<HTMLInputElement>(null);
   const categoryRef = useRef<HTMLInputElement>(null);
   const clientPriceRef = useRef<HTMLInputElement>(null);
@@ -38,6 +39,33 @@ export default function WorkTypesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
   const { alert, confirm } = useAlert();
+
+  const handleExportExcel = async () => {
+    try {
+      setIsExporting(true);
+      const res = await fetch('/api/work-templates/export');
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Export failed');
+      }
+      
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `work_types_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('Export error:', error);
+      alert(error.message || 'Ошибка при экспорте');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const { unitRates: storeRates, loading, error, fetchUnitRates, createUnitRate, updateUnitRate, deleteUnitRate } = useUnitRateStore();
 
@@ -166,13 +194,23 @@ export default function WorkTypesPage() {
       {/* Заголовок и табы */}
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white dark:text-white dark:text-white">Расценки по квадратуре</h1>
-        <button
-          onClick={handleAdd}
-          className="flex items-center gap-2 bg-[#1976d2] hover:bg-[#1565c0] text-white font-semibold px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Добавить расценку
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={handleExportExcel}
+            disabled={isExporting}
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
+          >
+            <FileText className="w-4 h-4" />
+            {isExporting ? 'Экспорт...' : 'Экспорт Excel'}
+          </button>
+          <button
+            onClick={handleAdd}
+            className="flex items-center gap-2 bg-[#1976d2] hover:bg-[#1565c0] text-white font-semibold px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Добавить расценку
+          </button>
+        </div>
       </div>
 
       {/* Табы */}

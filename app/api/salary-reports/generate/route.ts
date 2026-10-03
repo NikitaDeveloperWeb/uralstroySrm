@@ -14,6 +14,27 @@ export async function POST(request: NextRequest) {
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0, 23, 59, 59);
 
+    // Загружаем всех сотрудников
+    const allEmployees = await prisma.employee.findMany({
+      include: { hourlyRate: true },
+    });
+    
+    const employeeInfoMap = new Map<number, {
+      name: string;
+      paymentType: string;
+      monthlySalary: number;
+      hourlyRate: number;
+    }>();
+    
+    for (const emp of allEmployees) {
+      employeeInfoMap.set(emp.id, {
+        name: emp.fullName,
+        paymentType: emp.paymentType || '',
+        monthlySalary: emp.monthlySalary || 0,
+        hourlyRate: emp.hourlyRate?.rate || 0,
+      });
+    }
+
     // Загружаем все ЕОТ за месяц
     const eotReports = await prisma.eOTReport.findMany({
       where: {
@@ -27,47 +48,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Загружаем все авансы за месяц
-    const advanceReports = await prisma.advanceReport.findMany({
-      where: {
-        date: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
-      include: {
-        items: true,
-      },
-    });
-
-    // Считаем начисления по каждому сотруднику (из ЕОТ)
-    const salaryMap = new Map<number, {
-      name: string;
-      totalSalary: number;
-      days: number;
-      shifts: number;
-      hours: number;
-    }>();
-
-    for (const eot of eotReports) {
-      for (const item of eot.items) {
-        const existing = salaryMap.get(item.employeeId);
-        if (existing) {
-          existing.totalSalary += item.salary;
-          existing.days += 1;
-        } else {
-          salaryMap.set(item.employeeId, {
-            name: item.employeeName,
-            totalSalary: item.salary,
-            days: 1,
-            shifts: 0,
-            hours: 0,
-          });
-        }
-      }
-    }
-
-    // Считаем смены и часы по каждому сотруднику из расписания
+    // Загружаем все расписания за месяц
     const schedules = await prisma.schedule.findMany({
       where: {
         date: {
@@ -80,21 +61,48 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const scheduleMap = new Map<number, { shifts: number; hours: number }>();
+    // Считаем часы из расписания по каждому сотруднику
+    const scheduleHoursMap = new Map<number, number>();
+    const scheduleShiftsMap = new Map<number, number>();
+    
     for (const schedule of schedules) {
-      const existing = scheduleMap.get(schedule.employeeId);
-      if (existing) {
-        existing.shifts += 1;
-        existing.hours += schedule.hours || 0;
-      } else {
-        scheduleMap.set(schedule.employeeId, {
-          shifts: 1,
-          hours: schedule.hours || 0,
-        });
+      const hours = schedule.hours || 0;
+      const existingHours = scheduleHoursMap.get(schedule.employeeId) || 0;
+      const existingShifts = scheduleShiftsMap.get(schedule.employeeId) || 0;
+      
+      scheduleHoursMap.set(schedule.employeeId, existingHours + hours);
+      if (hours > 0) {
+        scheduleShiftsMap.set(schedule.employeeId, existingShifts + 1);
       }
     }
 
-    // Считаем выданные авансы по каждому сотруднику
+    // Считаем начисления из ЕОТ по каждому сотруднику
+    const eotSalaryMap = new Map<number, number>();
+    const eotDaysMap = new Map<number, number>();
+    
+    for (const eot of eotReports) {
+      for (const item of eot.items) {
+        const existingSalary = eotSalaryMap.get(item.employeeId) || 0;
+        const existingDays = eotDaysMap.get(item.employeeId) || 0;
+        
+        eotSalaryMap.set(item.employeeId, existingSalary + item.salary);
+        eotDaysMap.set(item.employeeId, existingDays + 1);
+      }
+    }
+
+    // Загружаем авансы
+    const advanceReports = await prisma.advanceReport.findMany({
+      where: {
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      include: {
+        items: true,
+      },
+    });
+
     const advanceMap = new Map<number, number>();
     for (const advance of advanceReports) {
       for (const item of advance.items) {
@@ -103,7 +111,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Считаем штрафы по каждому сотруднику
+    // Считаем штрафы
     const penaltiesReports = await prisma.penalty.findMany({
       where: {
         date: {
@@ -119,7 +127,7 @@ export async function POST(request: NextRequest) {
       penaltyMap.set(penalty.employeeId, existing + penalty.amount);
     }
 
-    // Считаем премии по каждому сотруднику
+    // Считаем премии
     const bonusReports = await prisma.bonus.findMany({
       where: {
         date: {
@@ -136,27 +144,69 @@ export async function POST(request: NextRequest) {
     }
 
     // Формируем итоговый список сотрудников
-    const entries = Array.from(salaryMap.entries()).map(([employeeId, data]) => {
-      const advances = advanceMap.get(employeeId) || 0;
-      const penalties = penaltyMap.get(employeeId) || 0;
-      const bonuses = bonusMap.get(employeeId) || 0;
-      const netAmount = Math.round(data.totalSalary + bonuses - advances - penalties);
-      const scheduleData = scheduleMap.get(employeeId);
-      
-      return {
-        employeeId,
-        employeeName: data.name,
-        grossSalary: Math.round(data.totalSalary + bonuses),
-        advances,
-        penalties,
-        bonuses,
-        netAmount: Math.max(0, netAmount), // Не отрицательная зарплата
-        days: data.days,
-        shifts: scheduleData?.shifts || 0,
-        hours: scheduleData?.hours || 0,
-        period: `${month}/${year}`,
-      };
-    });
+    const entries = Array.from(employeeInfoMap.entries())
+      .filter(([employeeId]) => {
+        // Включаем сотрудников, у которых есть начисления в ЕОТ
+        const hasEOTSalary = (eotSalaryMap.get(employeeId) || 0) > 0;
+        return hasEOTSalary;
+      })
+      .map(([employeeId, empInfo]) => {
+        const advances = advanceMap.get(employeeId) || 0;
+        const penalties = penaltyMap.get(employeeId) || 0;
+        const bonuses = bonusMap.get(employeeId) || 0;
+        
+        const scheduleHours = scheduleHoursMap.get(employeeId) || 0;
+        const scheduleShifts = scheduleShiftsMap.get(employeeId) || 0;
+        const eotSalary = eotSalaryMap.get(employeeId) || 0;
+        const eotDays = eotDaysMap.get(employeeId) || 0;
+        
+        let grossSalary: number;
+        let hours: number;
+        let shifts: number;
+        let days: number;
+        
+        if (empInfo.paymentType === 'оклад') {
+          // Для окладных: grossSalary не может превышать monthlySalary
+          grossSalary = Math.min(eotSalary, empInfo.monthlySalary);
+          hours = scheduleHours;
+          shifts = scheduleShifts;
+          days = eotDays;
+        } else if (empInfo.paymentType.includes('смен')) {
+          // Для сменных: из ЕОТ
+          hours = scheduleHours;
+          shifts = scheduleShifts;
+          days = eotDays;
+          grossSalary = eotSalary;
+        } else if (empInfo.paymentType.includes('сдел')) {
+          // Для сдельных: из ЕОТ
+          grossSalary = eotSalary;
+          hours = scheduleHours;
+          shifts = scheduleShifts;
+          days = eotDays;
+        } else {
+          // По умолчанию из ЕОТ
+          grossSalary = eotSalary;
+          hours = scheduleHours;
+          shifts = scheduleShifts;
+          days = eotDays;
+        }
+        
+        const netAmount = Math.round(grossSalary + bonuses - advances - penalties);
+        
+        return {
+          employeeId,
+          employeeName: empInfo.name,
+          grossSalary,
+          advances,
+          penalties,
+          bonuses,
+          netAmount: Math.max(0, netAmount),
+          days,
+          shifts,
+          hours,
+          period: `${month}/${year}`,
+        };
+      });
 
     if (entries.length === 0) {
       return errorResponse('Нет данных за указанный месяц', 400);
@@ -170,7 +220,6 @@ export async function POST(request: NextRequest) {
 
     let report;
     if (existing) {
-      // Удаляем старый отчет полностью и создаем новый
       await prisma.salaryReport.delete({
         where: { id: existing.id },
       });
@@ -201,7 +250,6 @@ export async function POST(request: NextRequest) {
         include: { items: true },
       });
     } else {
-      // Создаем новый отчет
       report = await prisma.salaryReport.create({
         data: {
           date: new Date(),

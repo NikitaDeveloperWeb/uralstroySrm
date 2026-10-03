@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { successResponse, errorResponse, handlePrismaError, deletedResponse } from '@/shared/lib/api-response';
 import { updateUserSchema } from '@/shared/lib/validators';
+import { getAuthUser } from '@/shared/lib/auth';
+import { UserRole } from '@prisma/client';
 
 // GET /api/users/[id] - получить пользователя по ID
 export async function GET(
@@ -9,16 +11,21 @@ export async function GET(
   context: any
 ) {
   try {
+    const user = await getAuthUser();
+    if (!user) {
+      return errorResponse('Не авторизован', 401);
+    }
+
     const { id } = await context.params;
-    const user = await prisma.user.findUnique({
+    const targetUser = await prisma.user.findUnique({
       where: { id: Number(id) },
     });
 
-    if (!user) {
+    if (!targetUser) {
       return errorResponse('Пользователь не найден', 404);
     }
 
-    return successResponse(user);
+    return successResponse(targetUser);
   } catch (error) {
     console.error('GET /api/users/[id] error:', error);
     return handlePrismaError(error);
@@ -31,16 +38,21 @@ export async function PATCH(
   context: any
 ) {
   try {
+    const user = await getAuthUser();
+    if (!user || user.role !== UserRole.ADMIN) {
+      return errorResponse('Доступ запрещен. Требуется роль администратора.', 403);
+    }
+
     const { id } = await context.params;
     const body = await request.json();
     const validated = updateUserSchema.parse(body);
 
-    const user = await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: Number(id) },
       data: validated,
     });
 
-    return successResponse(user);
+    return successResponse(updatedUser);
   } catch (error) {
     console.error('PATCH /api/users/[id] error:', error);
     return handlePrismaError(error);
@@ -53,6 +65,11 @@ export async function DELETE(
   context: any
 ) {
   try {
+    const user = await getAuthUser();
+    if (!user || user.role !== UserRole.ADMIN) {
+      return errorResponse('Доступ запрещен. Требуется роль администратора.', 403);
+    }
+
     const { id } = await context.params;
 
     await prisma.user.delete({

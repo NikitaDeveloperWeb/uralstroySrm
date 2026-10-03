@@ -67,6 +67,7 @@ interface FinanceStore {
 
   fetchAdvanceReports: (date?: string) => Promise<void>;
   addAdvanceReport: (data: { date: string; entries: Array<{ employeeId: number; employeeName: string; amount: string; purpose: string }> }) => Promise<void>;
+  updateAdvanceReport: (id: number, data: { date: string; entries: Array<{ employeeId: number; employeeName: string; amount: number; purpose: string }> }) => Promise<void>;
 
   fetchSalaryReports: (date?: string) => Promise<void>;
   addSalaryReport: (data: { date: string; entries: Array<{ employeeId: number; employeeName: string; amount: string; period: string }>; period: string }) => Promise<void>;
@@ -133,6 +134,19 @@ export const useFinanceStore = create<FinanceStore>((set) => ({
       });
       const { data: reports } = await apiFetch<ApiResponse<AdvanceReport[]>>('/api/advance-reports');
       set({ advanceReports: reports ?? [], loading: false });
+    } catch (e: unknown) {
+      set({ error: (e as Error).message });
+    }
+  },
+
+  updateAdvanceReport: async (id, data) => {
+    try {
+      await apiFetch<ApiResponse>(`/api/advance-reports/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      const { data: reports } = await apiFetch<ApiResponse<AdvanceReport[]>>('/api/advance-reports');
+      set({ advanceReports: reports ?? [] });
     } catch (e: unknown) {
       set({ error: (e as Error).message });
     }

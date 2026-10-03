@@ -42,6 +42,12 @@ export function EmployeeAdvanceModal({
   const [settlePurpose, setSettlePurpose] = useState('');
   const [settleCategory, setSettleCategory] = useState('Подотчет');
   const [settleDate, setSettleDate] = useState(new Date().toISOString().split('T')[0]);
+  const [settleSupplierId, setSettleSupplierId] = useState('');
+  const [settleProjectId, setSettleProjectId] = useState('');
+  const [settleCategoryName, setSettleCategoryName] = useState('');
+  const [expenseCategories, setExpenseCategories] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
 
   // Form state
   const [selectedEmployee, setSelectedEmployee] = useState('');
@@ -53,13 +59,16 @@ export function EmployeeAdvanceModal({
     if (isOpen) {
       fetchAdvances();
       fetchEmployees();
+      fetchSuppliers();
+      fetchProjects();
+      fetchExpenseCategories();
     }
   }, [isOpen]);
 
   const fetchAdvances = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/employee-advances');
+      const res = await fetch('/api/employee-advances', { credentials: 'include' });
       const data = await res.json();
       if (data.success) {
         setAdvances(data.data);
@@ -73,13 +82,49 @@ export function EmployeeAdvanceModal({
 
   const fetchEmployees = async () => {
     try {
-      const res = await fetch('/api/employees');
+      const res = await fetch('/api/employees', { credentials: 'include' });
       const data = await res.json();
       if (data.success) {
         setEmployees(data.data);
       }
     } catch (err) {
       console.error('Failed to fetch employees:', err);
+    }
+  };
+
+  const fetchSuppliers = async () => {
+    try {
+      const res = await fetch('/api/suppliers', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        setSuppliers(data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch suppliers:', err);
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const res = await fetch('/api/projects', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        setProjects(data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch projects:', err);
+    }
+  };
+
+  const fetchExpenseCategories = async () => {
+    try {
+      const res = await fetch('/api/expense-categories', { credentials: 'include' });
+      const data = await res.json();
+      if (data.success) {
+        setExpenseCategories(data.data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch expense categories:', err);
     }
   };
 
@@ -94,6 +139,7 @@ export function EmployeeAdvanceModal({
       const res = await fetch('/api/employee-advances', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           employeeId: Number(selectedEmployee),
           employeeName: employees.find(e => e.id === Number(selectedEmployee))?.fullName || '',
@@ -130,6 +176,7 @@ export function EmployeeAdvanceModal({
       const res = await fetch(`/api/employee-advances/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ status: 'settled' }),
       });
 
@@ -168,12 +215,15 @@ export function EmployeeAdvanceModal({
       const res = await fetch('/api/employee-advances/settle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({
           advanceId,
           amount,
           purpose: settlePurpose,
-          category: settleCategory,
+          category: settleCategoryName || settleCategory,
           date: settleDate,
+          supplierId: settleSupplierId ? Number(settleSupplierId) : null,
+          projectId: settleProjectId ? Number(settleProjectId) : null,
         }),
       });
 
@@ -189,6 +239,9 @@ export function EmployeeAdvanceModal({
       setSettlePurpose('');
       setSettleCategory('Подотчет');
       setSettleDate(new Date().toISOString().split('T')[0]);
+      setSettleSupplierId('');
+      setSettleProjectId('');
+      setSettleCategoryName('');
       await fetchAdvances();
     } catch (err) {
       console.error('Failed to settle in expenses:', err);
@@ -204,6 +257,7 @@ export function EmployeeAdvanceModal({
     try {
       const res = await fetch(`/api/employee-advances/${id}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (!res.ok) {
@@ -394,14 +448,60 @@ export function EmployeeAdvanceModal({
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
-                Категория
+                Категория расхода
               </label>
-              <input
-                type="text"
-                value={settleCategory}
-                onChange={(e) => setSettleCategory(e.target.value)}
+              <select
+                value={settleCategoryName}
+                onChange={(e) => setSettleCategoryName(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
-              />
+              >
+                <option value="">Выберите категорию</option>
+                {expenseCategories.map(cat => (
+                  <option key={cat.id} value={cat.name}>{cat.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+                Или введите свое: 
+                <input
+                  type="text"
+                  value={settleCategory}
+                  onChange={(e) => setSettleCategory(e.target.value)}
+                  className="mt-1 w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white text-xs"
+                  placeholder="Название категории"
+                />
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                Поставщик
+              </label>
+              <select
+                value={settleSupplierId}
+                onChange={(e) => setSettleSupplierId(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+              >
+                <option value="">Без поставщика</option>
+                {suppliers.map(sup => (
+                  <option key={sup.id} value={sup.id}>{sup.companyName || sup.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                Объект (проект)
+              </label>
+              <select
+                value={settleProjectId}
+                onChange={(e) => setSettleProjectId(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-slate-700 dark:text-white"
+              >
+                <option value="">Без объекта</option>
+                {projects.map(proj => (
+                  <option key={proj.id} value={proj.id}>{proj.name}</option>
+                ))}
+              </select>
             </div>
 
             <div className="flex gap-4">
@@ -466,20 +566,27 @@ export function EmployeeAdvanceModal({
                       <div className="mt-1 text-xs text-gray-500 dark:text-slate-400">
                         Выдано: {formatCurrency(advance.amount)} ₽ · 
                         Списано: {formatCurrency(advance.settledAmount || 0)} ₽ · 
-                        Остаток: {formatCurrency(advance.remaining ?? (advance.amount - (advance.settledAmount || 0)))} ₽
+                        Остаток: {formatCurrency(advance.remaining ?? (advance.amount - (advance.settledAmount ?? 0)))} ₽
                       </div>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-gray-900 dark:text-white">
-                      {formatCurrency(advance.amount)} ₽
-                    </span>
+                    <div className="text-right">
+                      <span className="text-lg font-bold text-gray-900 dark:text-white">
+                        {formatCurrency(advance.remaining ?? (advance.amount - (advance.settledAmount || 0)))} ₽
+                      </span>
+                      {(advance.settledAmount ?? 0) > 0 && (
+                        <div className="text-xs text-gray-500 dark:text-slate-400">
+                          из {formatCurrency(advance.amount)} ₽
+                        </div>
+                      )}
+                    </div>
                     {advance.status === 'active' ? (
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => {
                             setSettlingAdvanceId(advance.id);
-                            const remaining = advance.remaining ?? (advance.amount - (advance.settledAmount || 0));
+                            const remaining = advance.remaining ?? (advance.amount - (advance.settledAmount ?? 0));
                             setSettleAmount(String(remaining));
                             setShowSettleForm(true);
                           }}

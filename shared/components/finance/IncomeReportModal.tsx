@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Modal } from '@/shared/components/ui/Modal';
-import { Calendar, ChevronDown, ChevronUp, Clock, Loader2, Sun, Globe, Building2, ArrowUpCircle } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, Clock, Loader2, Sun, Globe, Building2, ArrowUpCircle, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface Transaction {
   id: number;
@@ -130,6 +131,106 @@ export function IncomeReportModal({ isOpen, onClose }: IncomeReportModalProps) {
 
   const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
   const avgCheck = transactions.length > 0 ? Math.round(totalAmount / transactions.length) : 0;
+
+  const handleExportExcel = () => {
+    if (transactions.length === 0) return;
+
+    // Определяем название периода
+    let periodTitle = '';
+    if (period === 'day') {
+      const d = new Date(dayDate);
+      periodTitle = d.toLocaleDateString('ru-RU');
+    } else if (period === 'week') {
+      const start = new Date(weekStart);
+      const end = new Date(weekEnd);
+      periodTitle = `${start.toLocaleDateString('ru-RU')} - ${end.toLocaleDateString('ru-RU')}`;
+    } else if (period === 'month') {
+      const [y, m] = monthDate.split('-');
+      const monthName = monthNames[parseInt(m) - 1];
+      periodTitle = `${monthName} ${y}`;
+    } else {
+      periodTitle = yearDate;
+    }
+
+    // Формируем данные для Excel
+    const rows: string[][] = [
+      ['ПРИХОДЫ'],
+      ['Период: ' + periodTitle],
+      [],
+      ['#', 'Дата', 'Проект', 'Сумма (₽)', 'Комментарий'],
+    ];
+
+    let rowNum = 1;
+    for (const t of transactions) {
+      const project = projects.find((p) => p.id === t.projectId);
+      rows.push([
+        String(rowNum),
+        new Date(t.date).toLocaleDateString('ru-RU'),
+        project?.name || `Проект #${t.projectId}`,
+        String(t.amount),
+        t.comment || '-',
+      ]);
+      rowNum++;
+    }
+
+    // Добавляем итоги
+    rows.push([]);
+    rows.push([
+      'ИТОГО',
+      '',
+      '',
+      String(totalAmount),
+      '',
+    ]);
+
+    rows.push([]);
+    rows.push(['Средний чек: ' + avgCheck.toLocaleString('ru-RU') + ' ₽']);
+    rows.push(['Количество приходов: ' + transactions.length]);
+
+    // Создаем workbook
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    
+    // Ширина колонок
+    ws['!cols'] = [
+      { wch: 5 },  // #
+      { wch: 14 }, // Дата
+      { wch: 40 }, // Проект
+      { wch: 15 }, // Сумма
+      { wch: 40 }, // Комментарий
+    ];
+
+    // Стилизация
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    for (let R = range.s.r; R <= range.e.r; R++) {
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[addr]) continue;
+        if (!ws[addr].s) ws[addr].s = {};
+        
+        // Заголовок
+        if (R === 0) {
+          ws[addr].s.font = { bold: true, sz: 14 };
+        }
+        // Подзаголовок с периодом
+        if (R === 1) {
+          ws[addr].s.font = { bold: true };
+        }
+        // Заголовки колонок
+        if (R === 4) {
+          ws[addr].s.font = { bold: true };
+          ws[addr].s.fill = { fgColor: { rgb: 'E8F5E9' } };
+        }
+        // Итого
+        if (R === rows.length - 4) {
+          ws[addr].s.font = { bold: true };
+        }
+      }
+    }
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Приходы');
+    XLSX.writeFile(wb, `приходы_${periodTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
 
   const groupedByProject = transactions.reduce((acc, t) => {
     if (!acc[t.projectId]) {
@@ -270,19 +371,32 @@ export function IncomeReportModal({ isOpen, onClose }: IncomeReportModalProps) {
         </div>
 
         {/* Summary cards */}
-        <div className="flex-shrink-0 grid grid-cols-3 gap-3">
-          <div className="bg-teal-50 rounded-lg p-3 border border-teal-200">
-            <p className="text-xs font-medium text-teal-700 mb-1">Всего приходов</p>
-            <p className="text-xl font-bold text-teal-900">{transactions.length}</p>
+        <div className="flex-shrink-0 space-y-3">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-teal-50 rounded-lg p-3 border border-teal-200">
+              <p className="text-xs font-medium text-teal-700 mb-1">Всего приходов</p>
+              <p className="text-xl font-bold text-teal-900">{transactions.length}</p>
+            </div>
+            <div className="bg-teal-50 rounded-lg p-3 border border-teal-200">
+              <p className="text-xs font-medium text-teal-700 mb-1">Общая сумма</p>
+              <p className="text-xl font-bold text-teal-900">{totalAmount.toLocaleString('ru-RU')} ₽</p>
+            </div>
+            <div className="bg-teal-50 rounded-lg p-3 border border-teal-200">
+              <p className="text-xs font-medium text-teal-700 mb-1">Средний чек</p>
+              <p className="text-xl font-bold text-teal-900">{avgCheck.toLocaleString('ru-RU')} ₽</p>
+            </div>
           </div>
-          <div className="bg-teal-50 rounded-lg p-3 border border-teal-200">
-            <p className="text-xs font-medium text-teal-700 mb-1">Общая сумма</p>
-            <p className="text-xl font-bold text-teal-900">{totalAmount.toLocaleString('ru-RU')} ₽</p>
-          </div>
-          <div className="bg-teal-50 rounded-lg p-3 border border-teal-200">
-            <p className="text-xs font-medium text-teal-700 mb-1">Средний чек</p>
-            <p className="text-xl font-bold text-teal-900">{avgCheck.toLocaleString('ru-RU')} ₽</p>
-          </div>
+          
+          {/* Export button */}
+          {transactions.length > 0 && (
+            <button
+              onClick={handleExportExcel}
+              className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-lg transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Экспорт в Excel
+            </button>
+          )}
         </div>
 
         {/* Content */}

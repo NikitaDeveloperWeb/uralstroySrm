@@ -11,7 +11,7 @@ async function main() {
       email: 'admin@example.com',
       password,
       name: 'Администратор',
-      role: 'admin',
+      role: 'ADMIN',
     },
   });
 

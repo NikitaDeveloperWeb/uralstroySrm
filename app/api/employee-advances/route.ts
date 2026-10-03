@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     // Добавляем remaining для каждого подотчета
     const advancesWithRemaining = advances.map(a => ({
       ...a,
-      remaining: a.amount - a.settledAmount
+      remaining: a.amount - (a.settledAmount || 0)
     }));
 
     return successResponse(advancesWithRemaining);

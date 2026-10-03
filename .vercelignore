@@ -1,0 +1,4 @@
+prisma/dev.db
+prisma/backups/
+node_modules/
+.next/
