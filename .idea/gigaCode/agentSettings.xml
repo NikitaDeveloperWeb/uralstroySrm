@@ -1171,6 +1171,63 @@
         <Execute>
           <option name="pattern" value="vercel deploy *" />
         </Execute>
+        <Execute>
+          <option name="pattern" value="Copy-Item .env.local .env -Force" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="$env:DEBUG=prisma:client" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item prismamigrations *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item prisma\fix-boolean.ts, prisma\migrate-missing.ts -Force" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="type .env.local" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="dir .env" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="type .env" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="dir prisma\backups\backup_2026-10-03T08-46-19.db" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="dir dev.db" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="del dev.db" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item dev.db -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="dir prisma\dev.db" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item -Recurse -Force .prisma -ErrorAction SilentlyContinue" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="dir prismabackups *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="dir node_modules\better-sqlite3" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="curl http://localhost:3000/api/backup -o prisma\backups\test_backup.db" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="dir prisma\backups\test_backup.db" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="dir appapibackup *" />
+        </Execute>
+        <Execute>
+          <option name="pattern" value="Remove-Item prisma\check-tables.ts, prisma\compare.ts, prisma\list-tables.ts, prisma\check-migrations.ts, prisma\clear-database.ts, prisma\clear-db.ts, prisma\clear.sql, prisma\drop-all.sql, prisma\recover-from-backup.ts, prisma\restore-backup.ts, prisma\restore.ts, prisma\migrate-data.ts -ErrorAction SilentlyContinue" />
+        </Execute>
       </list>
     </option>
     <option name="autoApprovedReads">

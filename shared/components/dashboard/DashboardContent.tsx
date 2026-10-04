@@ -88,20 +88,22 @@ export function DashboardContent() {
   const handleBackup = async () => {
     try {
       setIsBackingUp(true);
-      const res = await fetch('/api/backup');
-      if (!res.ok) throw new Error('Backup failed');
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
+      // Скачиваем последний бэкап из папки
+      const res = await fetch('/api/backups');
+      const data = await res.json();
+      if (!data.backups?.length) {
+        alert('Нет доступных бэкапов');
+        return;
+      }
+      const latest = data.backups[0];
       const a = document.createElement('a');
-      a.href = url;
-      a.download = res.headers.get('Content-Disposition')?.split('filename=')[1]?.replace(/\"/g, '') || 'backup.db';
+      a.href = `/api/backups/download/${latest.filename}`;
+      a.download = latest.filename;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Backup error:', error);
-      alert('Не удалось создать резервную копию');
     } finally {
       setIsBackingUp(false);
     }
