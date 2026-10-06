@@ -1,0 +1,8 @@
+{
+  "buildCommand": "npx prisma generate --schema=prisma/schema.prisma && next build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" }
+  ]
+}
